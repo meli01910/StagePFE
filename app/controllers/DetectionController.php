@@ -21,7 +21,10 @@ class DetectionController {
             exit;
         }
                require_once __DIR__ . '/../views/Detection/show.php';
+    }  public function getAllDetections() {
+        return $this->detectionModel->getAll();
     }
+    
     
     public function create() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

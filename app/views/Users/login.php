@@ -1,5 +1,4 @@
-<!-- login.php -->
-<?php session_start(); ?>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -10,7 +9,7 @@
 <body>
 <div class="container mt-5">
     <h2>Connexion</h2>
-    <form method="POST" action="login_process.php">
+    <form method="POST" action="">
         <div class="form-group">
             <label>Email</label>
             <input type="email" name="email" class="form-control" required>
@@ -19,9 +18,9 @@
             <label>Mot de passe</label>
             <input type="password" name="mot_de_passe" class="form-control" required>
         </div>
-        <button type="submit" class="btn btn-success">Se connecter</button>
+        <button type="submit" class="btn btn-primary mt-3">Se connecter</button>
     </form>
-    <p class="mt-3">Pas encore inscrit ? <a href="register.php">Créer un compte</a></p>
+    <p class="mt-3">Pas encore inscrit ? <a href="index.php?action=register">Inscription</a></p>
 </div>
 </body>
 </html>

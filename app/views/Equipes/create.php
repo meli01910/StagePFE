@@ -1,25 +1,34 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Créer une Équipe</title>
-</head>
-<body>
-    <h1>Créer une Équipe</h1>
+<?php include __DIR__ . '/../templates/header.php'; ?>
 
-    <form action="index.php?module=equipe&action=create&tournoi_id=<?= htmlspecialchars($_GET['tournoi_id']) ?>" method="post">
-        <label for="nom">Nom de l'équipe :</label><br>
-        <input type="text" id="nom" name="nom" required><br><br>
-
-        <label for="logo">URL du logo :</label><br>
-        <input type="text" id="logo" name="logo"><br><br>
-
-        <label for="contact_email">Email de contact :</label><br>
-        <input type="email" id="contact_email" name="contact_email"><br><br>
-
-        <input type="submit" value="Créer l'équipe">
+<div class="container mt-4">
+    <h1>Ajouter une équipe</h1>
+    
+    <?php if (isset($error)): ?>
+        <div class="alert alert-danger"><?= $error ?></div>
+    <?php endif; ?>
+    
+    <form method="post" action="index.php?module=equipe&action=create&tournoi_id=<?= $tournoiId ?>">
+        <div class="mb-3">
+            <label for="nom" class="form-label">Nom de l'équipe</label>
+            <input type="text" class="form-control" id="nom" name="nom" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="logo" class="form-label">URL du logo</label>
+            <input type="url" class="form-control" id="logo" name="logo" placeholder="http://exemple.com/logo.png">
+            <small class="form-text text-muted">Entrez l'URL d'une image pour le logo de l'équipe (optionnel)</small>
+        </div>
+        
+        <div class="mb-3">
+            <label for="contact_email" class="form-label">Email de contact</label>
+            <input type="email" class="form-control" id="contact_email" name="contact_email" required>
+        </div>
+        
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <a href="index.php?module=equipe&action=listByTournoi&tournoi_id=<?= $tournoiId ?>" class="btn btn-secondary">Annuler</a>
+        </div>
     </form>
+</div>
 
-    <p><a href="index.php?module=tournoi&action=show&id=<?= htmlspecialchars($_GET['tournoi_id']) ?>">← Retour au tournoi</a></p>
-</body>
-</html>
+<?php include __DIR__ . '/../templates/footer.php'; ?>

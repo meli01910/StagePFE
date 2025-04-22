@@ -1,7 +1,7 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
-    header('Location: login.php');
+if (!isset($_SESSION['user_id']) || $_SESSION['is_admin'] != 1) {
+    header('Location: index.php?action=login');
     exit;
 }
 ?>
@@ -14,12 +14,17 @@ if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
 </head>
 <body>
 <div class="container mt-5">
-    <h2>Bienvenue Admin, <?= htmlspecialchars($_SESSION['nom']) ?> 👑</h2>
-    <ul class="list-group mt-4">
-        <li class="list-group-item"><a href="index.php?module=tournoi&action=index">Gérer les tournois</a></li>
-        <li class="list-group-item"><a href="index.php?module=equipe&action=index">Gérer les équipes</a></li>
-        <li class="list-group-item"><a href="logout.php">Déconnexion</a></li>
-    </ul>
+    <h1>Bienvenue Admin 👑</h1>
+    <p>Tu as accès aux fonctionnalités administratives du site.</p>
+    <a href="index.php?action=logout" class="btn btn-danger">Déconnexion</a>
+</div>
+<div class="card">
+    <div class="card-header">Joueurs en attente</div>
+    <div class="card-body">
+        <h5 class="card-title"><?= $stats['joueurs_attente'] ?> joueurs</h5>
+        <p class="card-text">Joueurs en attente d'approbation.</p>
+        <a href="index.php?module=admin&action=joueurs_attente" class="btn btn-primary">Voir les joueurs</a>
+    </div>
 </div>
 </body>
 </html>

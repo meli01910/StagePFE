@@ -1,22 +1,4 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liste des Tournois</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-        .status-planifie { background-color: #6c757d; color: white; }
-        .status-en_cours { background-color: #28a745; color: white; }
-        .status-termine { background-color: #dc3545; color: white; }
-    </style>
-</head>
+<?php require __DIR__ . '/../templates/header.php'; ?>
 <body>
     <div class="container mt-4">
         <h1 class="mb-4">Liste des Tournois</h1>
@@ -128,6 +110,4 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php require __DIR__ . '/../templates/footer.php'; ?>
