@@ -1,13 +1,140 @@
 <?php
 namespace App\models;
-
+use App\models\PDOException;
+use App\models\PDO;
 class Utilisateur {
     private $pdo;
     
     public function __construct($pdo) {
         $this->pdo = $pdo;
     }
+
+    public function update($id, $data) {
+        if (isset($data['mot_de_passe'])) {
+            $data['mot_de_passe'] = password_hash($data['mot_de_passe'], PASSWORD_BCRYPT);
+        }
+        // Vérifier que l'ID est valide
+        if (!isset($id) || !is_numeric($id)) {
+            return false;
+        }
+
+        
+        // Construire la requête SQL dynamiquement en fonction des champs fournis
+        $fields = [];
+        $params = [];
+        
+        // Liste des champs autorisés à être mis à jour
+        $allowedFields = [
+            'nom', 'prenom', 'email', 'telephone', 'poste', 
+            'niveau_jeu', 'taille', 'poids', 'nationalite', 
+            'statut', 'date_naissance'
+        ];
+        
+        // Construction des paires champ=valeur pour la requête SQL
+        foreach ($data as $field => $value) {
+            if (in_array($field, $allowedFields)) {
+                $fields[] = "$field = :$field";
+                $params[$field] = $value;
+            }
+        }
+        
+        // Si mot de passe fourni, le hasher
+        if (isset($data['mot_de_passe']) && !empty($data['mot_de_passe'])) {
+            $fields[] = "mot_de_passe = :mot_de_passe";
+            $params['mot_de_passe'] = password_hash($data['mot_de_passe'], PASSWORD_DEFAULT);
+        }
+        
+        // Vérifier qu'il y a des champs à mettre à jour
+        if (empty($fields)) {
+            return false;
+        }
+        
+        // Construction de la requête SQL complète
+        $sql = "UPDATE utilisateurs SET " . implode(', ', $fields) . " WHERE id = :id AND role = 'joueur'";
+        $params['id'] = $id;
+        
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute($params);
+        } catch (\PDOException $e) {
+            // Enregistrer l'erreur dans un fichier log
+            error_log("Erreur lors de la mise à jour du joueur ID $id: " . $e->getMessage());
+            return false;
+        }
+    }
+    public function delete($id) {
+        $stmt = $this->pdo->prepare("DELETE FROM utilisateurs WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+
+
+
+
+
+
+ /**
+     * Récupère le chemin du justificatif d'un utilisateur
+     * 
+     * @param int $id ID de l'utilisateur
+     * @return array|false Informations sur le justificatif ou false si non trouvé
+     */
+    public function getJustificatif($id) {
+        try {
+            $stmt = $this->pdo->prepare("SELECT justificatif FROM utilisateurs WHERE id = ?");
+            $stmt->execute([$id]);
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if (!$result || empty($result['justificatif'])) {
+                return false;
+            }
+            
+            return $result;
+        } catch (\PDOException $e) {
+            error_log("Erreur lors de la récupération du justificatif: " . $e->getMessage());
+            return false;
+        }
+    }
+
+
+
+
+
+
+
+
+
+    public function updatePlayerStatus($id, $statut) {
+        if (!in_array($statut, ['approuve', 'refuse'])) {
+            return false;
+        }
+        
+        $sql = "UPDATE utilisateurs SET statut = :statut WHERE id = :id AND role = 'joueur'";
+        
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(':id', $id, \PDO::PARAM_INT);
+            $stmt->bindParam(':statut', $statut, \PDO::PARAM_STR);
+            return $stmt->execute();
+        } catch (\PDOException $e) {
+            error_log('Erreur lors de la mise à jour du statut: ' . $e->getMessage());
+            return false;
+        }
+    }
     
+    public function generatePassword($length = 8) {
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
+        return substr(str_shuffle($chars), 0, $length);
+    }
+    public function getPlayerById($id) {
+    $query = "SELECT * FROM utilisateurs WHERE id = :id AND role = 'joueur'";
+    $stmt = $this->pdo->prepare($query);
+    $stmt->bindParam(':id', $id, \PDO::PARAM_INT);
+    $stmt->execute();
+    
+    $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+    return $result ? $result : false;
+}
+
     // Méthode d'inscription
     public function inscription($data) {
         // Hashage du mot de passe
@@ -133,28 +260,32 @@ class Utilisateur {
         return $stmt->fetchColumn() > 0;
     }
     // Méthode pour compter les joueurs selon leur statut
-public function countByStatus($status) {
-    $sql = "SELECT COUNT(*) FROM utilisateurs WHERE statut = :status AND role != 'admin'";
+public function countByStatus($statut) {
+    $sql = "SELECT COUNT(*) FROM utilisateurs WHERE statut = :statut AND role != 'admin'";
     $stmt = $this->pdo->prepare($sql);
-    $stmt->execute(['status' => $status]);
+    $stmt->execute(['statut' => $statut]);
     return $stmt->fetchColumn();
 }
 
 // Méthode pour récupérer les utilisateurs selon leur statut
-public function getByStatus($status) {
-    $sql = "SELECT id, nom, prenom, email, date_inscription as date_creation FROM utilisateurs 
-            WHERE statut = :status AND role != 'admin'";
+public function getByStatus($statut) {
+    $sql = "SELECT id, nom, prenom, email, date_naissance, telephone, poste, niveau_jeu, 
+            taille, poids, nationalite, justificatif, statut, date_creation 
+            FROM utilisateurs 
+            WHERE statut = :statut AND role != 'admin'";
+    
     $stmt = $this->pdo->prepare($sql);
-    $stmt->execute(['status' => $status]);
+    $stmt->execute(['statut' => $statut]);
     return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 }
 
+
 // Méthode pour mettre à jour le statut d'un utilisateur
-public function updateStatus($id, $status) {
+public function updateStatus($id, $statut) {
     $sql = "UPDATE utilisateurs SET statut = :status WHERE id = :id";
     $stmt = $this->pdo->prepare($sql);
     return $stmt->execute([
-        'status' => $status,
+        'status' => $statut,
         'id' => $id
     ]);
 }
@@ -173,8 +304,8 @@ public function getStatistics() {
     
     // Nombre de joueurs par statut
     $statuses = ['en_attente', 'approuve', 'refuse'];
-    foreach ($statuses as $status) {
-        $stats[$status] = $this->countByStatus($status);
+    foreach ($statuses as $statut) {
+        $stats[$statut] = $this->countByStatus($statut);
     }
     
     // Total des utilisateurs (hors admin)
@@ -193,4 +324,29 @@ public function getStatistics() {
     
     return $stats;
 }
+
+
+/**
+ * Récupère tous les joueurs (utilisateurs avec role='joueur')
+ * @return array La liste des joueurs
+ */
+public function getAllPlayers() {
+    $query = "SELECT id, nom, prenom, email, telephone, poste as position, 
+    niveau_jeu, taille, poids, nationalite, statut,
+    date_naissance, date_creation, justificatif 
+    FROM utilisateurs 
+    WHERE role = 'joueur' 
+    ORDER BY nom ASC";
+    
+    $stmt = $this->pdo->prepare($query);
+    $stmt->execute();
+    return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+}
+
+public function getJoueursByEquipe($equipeId) {
+    $stmt = $this->pdo->prepare("SELECT * FROM utilisateurs WHERE equipe_id = :equipe_id");
+    $stmt->execute(['equipe_id' => $equipeId]);
+    return $stmt->fetchAll();
+}
+
 }

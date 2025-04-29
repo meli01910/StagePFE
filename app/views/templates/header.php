@@ -6,7 +6,8 @@
     <title>FootballStar - Détections et tournois de football</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/style.css">
+  
+    
 </head>
 <body>
     <header>
@@ -29,18 +30,13 @@
                         <li class="nav-item">
                             <a class="nav-link <?= isset($_GET['module']) && $_GET['module'] === 'tournoi' ? 'active' : '' ?>" href="index.php?module=tournoi&action=list">Tournois</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= isset($_GET['module']) && $_GET['module'] === 'tournoi' ? 'active' : '' ?>" href="index.php?module=admin&action=joueur_attente">Joueurs</a>
+                        </li>
                     </ul>
                     <div class="d-flex">
                         <?php if(isset($_SESSION['user'])): ?>
-                            <?php if($_SESSION['user']['role'] === 'admin'): ?>
-                                <a href="index.php?module=admin&action=dashboard" class="btn btn-outline-light me-2">
-                                    <i class="fas fa-tachometer-alt"></i> Administration
-                                </a>
-                            <?php else: ?>
-                                <a href="index.php?module=joueur&action=profile" class="btn btn-outline-light me-2">
-                                    <i class="fas fa-user"></i> Mon profil
-                                </a>
-                            <?php endif; ?>
+                         
                             <a href="index.php?module=auth&action=logout" class="btn btn-danger">
                                 <i class="fas fa-sign-out-alt"></i> Déconnexion
                             </a>

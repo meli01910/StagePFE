@@ -15,7 +15,7 @@ class TournoiController {
         $this->equipes = new Equipe($pdo);
     }
 
-    public function index() {
+    public function list() {
         $tournois = $this->model->getAll();
         require __DIR__.'/../views/Tournois/list.php';
     }
@@ -38,14 +38,7 @@ class TournoiController {
             exit;
         }
         
-        $equipes = $this->equipes->getByTournoi($id);
-        $nombreEquipes = count($equipes);
         
-        // Récupérer les poules si elles existent
-        $poules = [];
-        if ($tournoi['poules_generees']) {
-            $poules = $this->model->getPoulesWithEquipesByTournoi($id);
-        }
         
         require __DIR__.'/../views/Tournois/show.php';
     }
@@ -63,7 +56,7 @@ class TournoiController {
             );
             
             if ($success) {
-                header('Location: index.php?module=tournoi&action=index&success=created');
+                header('Location: index.php?module=admin&action=list_tournois&success=created');
             } else {
                 header('Location: index.php?module=tournoi&action=create&error=create_failed');
             }
@@ -107,34 +100,89 @@ class TournoiController {
         exit;
     }
 
+// Ajoutez ces méthodes à votre TournoiController
 
-
-/*********************************************** */
-
-
-
-// Générer les poules
-public function genererPoules() {
-    if (!isset($_POST['tournoi_id']) || !isset($_POST['nb_poules'])) {
-        $_SESSION['message'] = 'Paramètres manquants.';
-        $_SESSION['message_class'] = 'alert-danger';
-        header('Location: index.php?controller=tournoi');
+// Affiche la page pour ajouter des équipes à un tournoi
+public function ajouterEquipe() {
+    // Vérifier que l'utilisateur est connecté et est admin
+    if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        header('Location: index.php?module=auth&action=login');
         exit;
     }
     
-    $tournoiId = $_POST['tournoi_id'];
-    $nbPoules = (int)$_POST['nb_poules'];
+    $tournoi_id = $_GET['id'] ?? null;
     
-    try {
-        $this->model->genererPoules($tournoiId, $nbPoules);
-        $_SESSION['message'] = 'Les poules ont été générées avec succès.';
-        $_SESSION['message_class'] = 'alert-success';
-    } catch (\Exception $e) {
-        $_SESSION['message'] = 'Erreur lors de la génération des poules: ' . $e->getMessage();
-        $_SESSION['message_class'] = 'alert-danger';
+    if (!$tournoi_id) {
+        header('Location: index.php?module=tournoi&action=list');
+        exit;
     }
     
-    header('Location: index.php?controller=tournoi&action=show&id=' . $tournoiId);
+    // Récupérer le tournoi
+    $tournoi = $this->model->getById($tournoi_id);
+    if (!$tournoi) {
+        header('Location: index.php?module=tournoi&action=list');
+        exit;
+    }
+    
+    // Si c'est un POST, traiter l'ajout d'équipe
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $equipe_id = $_POST['equipe_id'] ?? null;
+        
+        if ($equipe_id) {
+            $success = $this->equipes->addToTournament($equipe_id, $tournoi_id);
+            
+            if ($success) {
+                $_SESSION['flash'] = [
+                    'type' => 'success',
+                    'message' => 'L\'équipe a été ajoutée au tournoi avec succès.'
+                ];
+            } else {
+                $_SESSION['flash'] = [
+                    'type' => 'danger',
+                    'message' => 'Une erreur est survenue lors de l\'ajout de l\'équipe au tournoi.'
+                ];
+            }
+        }
+        
+        header("Location: index.php?module=admin&action=tournoi_view&id=$tournoi_id");
+        exit;
+    }
+    
+    // Si c'est un GET, afficher la page d'ajout d'équipe
+    // Récupérer toutes les équipes
+    $equipes = $this->equipes->getAll();
+    
+    // Récupérer les équipes déjà inscrites à ce tournoi
+    $equipesTournoi = $this->equipes->getByTournoi($tournoi_id);
+    $equipesInscritesIds = array_column($equipesTournoi, 'id');
+    
+    require __DIR__ . '/../views/Tournois/ajout_equipe.php';
+}
+
+
+// Retire une équipe d'un tournoi
+public function retirerEquipe() {
+    if (!isset($_GET['tournoi_id']) || !isset($_GET['equipe_id'])) {
+        header('Location: index.php?module=tournoi&action=list');
+        exit;
+    }
+    
+    $tournoi_id = $_GET['tournoi_id'];
+    $equipe_id = $_GET['equipe_id'];
+    
+    if ($this->equipes->removeFromTournament($equipe_id, $tournoi_id)) {
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'message' => 'L\'équipe a été retirée du tournoi avec succès.'
+        ];
+    } else {
+        $_SESSION['flash'] = [
+            'type' => 'danger',
+            'message' => 'Une erreur est survenue lors du retrait de l\'équipe du tournoi.'
+        ];
+    }
+    
+    header("Location: index.php?module=tournoi&action=show&id=$tournoi_id");
     exit;
 }
 

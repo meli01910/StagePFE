@@ -10,10 +10,14 @@ class Detection {
     }
     
     public function getAll() {
-        return $this->pdo->query("SELECT * FROM detections")->fetchAll();
+        $sql = "SELECT * FROM detections";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
     
     
+                                                                                                                       
     public function getDetectionById($id) {
         $stmt = $this->pdo->prepare("SELECT * FROM detections WHERE id = ?");
         $stmt->execute([$id]);
@@ -54,5 +58,57 @@ class Detection {
         $stmt = $this->pdo->prepare("DELETE FROM detections WHERE id = ?");
         return $stmt->execute([$id]);
     }
+    /**
+ * Récupère les sessions de détection à venir
+ * @param int $limit
+ * @return array
+ */
+/**
+ * Récupère les sessions de détection à venir
+ * @param int $limit
+ * @return array
+ */
+public function getUpcoming($limit = 3) {
+    // Version simplifiée sans compter les inscriptions
+    $sql = "SELECT * 
+            FROM detections";
+    
+    if ($limit) {
+        $sql .= " LIMIT :limit";
+    }
+    
+    $stmt = $this->pdo->prepare($sql);
+    
+    if ($limit) {
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+    }
+    
+    $stmt->execute();
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Vérification des données pour éviter les erreurs
+    foreach ($results as &$detection) {
+        if (!isset($detection['nom'])) $detection['nom'] = 'Session sans nom';
+        if (!isset($detection['location'])) $detection['location'] = 'Lieu non défini';
+        if (!isset($detection['date']) || empty($detection['date'])) $detection['date'] = null;
+        // Fournir une valeur par défaut pour inscrits puisque nous n'avons pas cette information
+      
+    }
+    
+    return $results;
+}
+
+
+/**
+ * Compte les sessions de détection à venir
+ * @return int
+ */
+public function countUpcoming() {
+    $sql = "SELECT COUNT(*) FROM detections WHERE date >= CURDATE()";
+    $stmt = $this->pdo->prepare($sql);
+    $stmt->execute();
+    return $stmt->fetchColumn();
+}
+
     
 }

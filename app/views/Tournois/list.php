@@ -1,113 +1,134 @@
-<?php require __DIR__ . '/../templates/header.php'; ?>
-<body>
+
+
+<?php
+// Fichier: /app/views/Users/dashboard_admin.php
+// S'assurer que l'utilisateur est un admin
+if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+    header('Location: index.php?module=auth&action=login');
+    exit;
+}
+
+
+
+ include __DIR__ . '/../templates/header.php';
+// Définir le titre et la page active
+// Définir le titre de la page et la page active
+$pageTitle = 'Gestion des Joueurs';
+$currentPage = 'players';
+
+// Capturer le contenu
+ob_start();
+?>
+
     <div class="container mt-4">
-        <h1 class="mb-4">Liste des Tournois</h1>
-
-        <?php if (isset($_GET['success'])): ?>
+        <?php if(isset($_GET['success'])): ?>
             <div class="alert alert-success">
-                <?php
-                switch ($_GET['success']) {
-                    case 'created': echo "Tournoi créé avec succès"; break;
-                    case 'updated': echo "Tournoi mis à jour avec succès"; break;
-                    case 'deleted': echo "Tournoi supprimé avec succès"; break;
-                }
+                <?php 
+                    switch($_GET['success']) {
+                        case 'created': echo "Le tournoi a été créé avec succès"; break;
+                        case 'deleted': echo "Le tournoi a été supprimé avec succès"; break;
+                        default: echo "Opération réussie"; break;
+                    }
                 ?>
             </div>
         <?php endif; ?>
 
-        <?php if (isset($_GET['error'])): ?>
-            <div class="alert alert-danger">
-                <?php
-                switch ($_GET['error']) {
-                    case 'delete_failed': echo "Échec de la suppression du tournoi"; break;
-                    case 'not_found': echo "Tournoi introuvable"; break;
-                }
-                ?>
-            </div>
-        <?php endif; ?>
-
-        <div class="mb-3">
-            <a href="index.php?module=tournoi&action=create" class="btn btn-primary">
-                Créer un nouveau tournoi
-            </a>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Liste des Tournois</h1>
+            <a href="index.php?module=admin&action=tournoi_add" class="btn btn-primary">Ajouter un tournoi</a>
         </div>
 
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5>Tous les tournois</h5>
-                <div class="btn-group">
-                    <a href="?module=tournoi&action=index" class="btn btn-sm btn-outline-secondary">Tous</a>
-                    <a href="?module=tournoi&action=index&status=planifie" class="btn btn-sm btn-outline-secondary">Planifiés</a>
-                    <a href="?module=tournoi&action=index&status=en_cours" class="btn btn-sm btn-outline-secondary">En cours</a>
-                    <a href="?module=tournoi&action=index&status=termine" class="btn btn-sm btn-outline-secondary">Terminés</a>
-                </div>
-            </div>
-            
-            <div class="card-body">
-                <table class="table table-hover">
-                    <thead>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Lieu</th>
+                        <th>Dates</th>
+                        <th>Format</th>
+                        <th>Catégorie</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if(empty($tournois)): ?>
                         <tr>
-                            <th>Nom</th>
-                            <th>Dates</th>
-                            <th>Lieu</th>
-                            <th>Format</th>
-                            <th>Statut</th>
-                            <th>Actions</th>
+                            <td colspan="9" class="text-center">Aucun tournoi disponible</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($tournois as $tournoi): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($tournoi['nom']) ?></td>
-                            <td>
-                                <?= date('d/m/Y', strtotime($tournoi['date_debut'])) ?>
-                                au
-                                <?= date('d/m/Y', strtotime($tournoi['date_fin'])) ?>
-                            </td>
-                            <td><?= htmlspecialchars($tournoi['lieu']) ?></td>
-                            <td>
-                                <?php
-                                $formats = [
-                                    'elimination' => 'Élimination',
-                                    'poules' => 'Poules',
-                                    'mixte' => 'Mixte'
-                                ];
-                                echo $formats[$tournoi['format']] ?? $tournoi['format'];
-                                ?>
-                            </td>
-                            <td>
-                                <span class="status-badge status-<?= $tournoi['statut'] ?>">
-                                    <?php
-                                    $statuts = [
-                                        'planifie' => 'Planifié',
-                                        'en_cours' => 'En cours',
-                                        'termine' => 'Terminé'
-                                    ];
-                                    echo $statuts[$tournoi['statut']] ?? $tournoi['statut'];
-                                    ?>
-                                </span>
-                            </td>
-                            <td>
-                                <a href="index.php?module=tournoi&action=show&id=<?= $tournoi['id'] ?>" 
-                                   class="btn btn-sm btn-info">
-                                    Voir
-                                </a>
-                                <a href="index.php?module=tournoi&action=edit&id=<?= $tournoi['id'] ?>" 
-                                   class="btn btn-sm btn-warning">
-                                    Modifier
-                                </a>
-                                <form method="POST" action="index.php?module=tournoi&action=delete&id=<?= $tournoi['id'] ?>" 
-                                      style="display: inline-block;" 
-                                      onsubmit="return confirm('Supprimer ce tournoi définitivement ?')">
-                                    <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
-                                </form>
-                            </td>
-                        </tr>
+                    <?php else: ?>
+                        <?php foreach($tournois as $tournoi): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($tournoi['id']) ?></td>
+                                <td><?= htmlspecialchars($tournoi['nom']) ?></td>
+                                <td><?= htmlspecialchars($tournoi['lieu']) ?></td>
+                                <td>
+                                    Du <?= date('d/m/Y', strtotime($tournoi['date_debut'])) ?> 
+                                    au <?= date('d/m/Y', strtotime($tournoi['date_fin'])) ?>
+                                </td>
+                                <td><?= htmlspecialchars($tournoi['format']) ?></td>
+                                <td><?= htmlspecialchars($tournoi['categorie']) ?></td>    <td>
+                                    <span class="badge bg-<?= $tournoi['statut'] === 'À venir' ? 'warning' : 
+                                                           ($tournoi['statut'] === 'En cours' ? 'success' : 'secondary') ?>">
+                                        <?= htmlspecialchars($tournoi['statut']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="index.php?module=admin&action=tournoi_view&id=<?= $tournoi['id'] ?>" 
+                                           class="btn btn-sm btn-info">Voir</a>
+                                        <a href="index.php?module=tournoi&action=edit&id=<?= $tournoi['id'] ?>" 
+                                           class="btn btn-sm btn-warning">Modifier</a>
+                                        <a href="index.php?cmodule=admin&action=delete&id=<?= $tournoi['id'] ?>" 
+                                           class="btn btn-sm btn-danger" 
+                                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce tournoi?')">Supprimer</a>
+                                    </div>
+                                </td>
+                            </tr>
                         <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 
-<?php require __DIR__ . '/../templates/footer.php'; ?>
+
+
+<?php
+$content = ob_get_clean();
+// Inclure le layout
+include __DIR__ . '/../Users/adminl_layout.php';
+?>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

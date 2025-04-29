@@ -230,5 +230,9 @@ public function getPoulesWithEquipesByTournoi($tournoiId) {
     
     return $poules;
 }
+
+
+
+
  
 }

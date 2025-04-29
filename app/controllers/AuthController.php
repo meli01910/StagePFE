@@ -5,8 +5,10 @@ use App\models\Utilisateur;
 
 class AuthController {
     private $utilisateurModel;
+    private $pdo;
     
     public function __construct($pdo) {
+        $this->pdo = $pdo;
         $this->utilisateurModel = new Utilisateur($pdo);
     }
     
@@ -41,11 +43,11 @@ class AuthController {
                     $_SESSION['message'] = "Connexion réussie. Bienvenue " . $user['prenom'] . " " . $user['nom'] . " !";
                     $_SESSION['message_type'] = "success";
                     
-                    header('Location: index.php?module=admin&action=dashboard');
+                    header('Location: index.php?module=utilisateur&action=dashboard');
                     exit;
                 } else {
                     // Pour les non-admins, vérifier le statut du compte
-                    if ($user['statut'] === 'actif') {
+                    if ($user['statut'] === 'approuve') {
                         // Compte actif, connexion normale
                         $_SESSION['user'] = [
                             'id' => $user['id'],
@@ -68,9 +70,8 @@ class AuthController {
                             'prenom' => $user['prenom'],
                             'email' => $user['email']
                         ];
-                        
-                        header('Location: index.php?module=auth&action=confirmation');
-                        exit;
+                         header('Location: index.php?module=auth&action=confirmation');
+                                              exit;
                     } else {
                         // Compte refusé ou désactivé
                         $_SESSION['message'] = "Votre compte a été " . 
@@ -88,7 +89,7 @@ class AuthController {
         
         // Afficher le formulaire de connexion
         require_once __DIR__ . '/../views/templates/header.php';
-        require_once __DIR__ . '/../views/Users/login.php';
+        require_once __DIR__ . '/../views/Authentification/login.php';
         require_once __DIR__ . '/../views/templates/footer.php';
     }
     
@@ -184,10 +185,9 @@ class AuthController {
                         'prenom' => $userData['prenom'],
                         'email' => $userData['email']
                     ];
-                    
-                    // Rediriger vers une page de confirmation
-                    header('Location: index.php?module=auth&action=confirmation');
-                    exit;
+                     // Rediriger vers la page de confirmation
+    header('Location: index.php?module=auth&action=confirmation');
+                          exit;
                 } else {
                     $message = "Une erreur s'est produite lors de l'inscription.";
                     $messageType = "danger";
@@ -200,37 +200,35 @@ class AuthController {
         }
         
         // Afficher le formulaire d'inscription
-           require_once __DIR__ . '/../views/Users/register.php';
-           }
-    
-           public function confirmation() {
-            // Vérifier si l'utilisateur vient bien de s'inscrire
-            if (!isset($_SESSION['inscription_reussie']) || $_SESSION['inscription_reussie'] !== true) {
-                $_SESSION['message'] = "Accès non autorisé.";
-                $_SESSION['message_type'] = "danger";
-                header('Location: index.php');
-                exit;
-            }
-            
-            // Récupérer les données d'inscription
-            $userData = $_SESSION['inscription_data'];
-            
-            // Supprimer les variables de session temporaires
-            unset($_SESSION['inscription_reussie']);
-            unset($_SESSION['inscription_data']);
-            
-            // Afficher la page de confirmation
-                 require_once __DIR__ . '/../views/Users/confirmation_inscription.php';
-                 }
+        require_once __DIR__ . '/../views/templates/header.php';
+        require_once __DIR__ . '/../views/Authentification/register.php';
+        require_once __DIR__ . '/../views/templates/footer.php';
+    }
+
+    // Ajout de la méthode confirmation manquante
+    public function confirmation() {
+        if (!isset($_SESSION['inscription_reussie']) && !isset($_SESSION['user'])) {
+                     exit;
+        }
         
+        require_once __DIR__ . '/../views/templates/header.php';
+        require_once __DIR__ . '/../views/Authentification/confirmation_inscription.php';
+        require_once __DIR__ . '/../views/templates/footer.php';
+    }
+
+    // Méthode pour la déconnexion
     public function logout() {
-        // Destruction de la session
+        // Détruire la session
+        session_unset();
         session_destroy();
         
-        // Redirection vers la page d'accueil
+        $_SESSION = array();
+        
+        // Démarrer une nouvelle session pour le message
+        session_start();
         $_SESSION['message'] = "Vous avez été déconnecté avec succès.";
         $_SESSION['message_type'] = "success";
-        header('Location: index.php');
-        exit;
+        
+            exit;
     }
 }
