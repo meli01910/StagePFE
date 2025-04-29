@@ -97,7 +97,7 @@ ob_start();
                                         <img src="assets/images/empty-list.svg" alt="Aucune détection" width="120" class="mb-3">
                                         <h5>Aucune journée de détection</h5>
                                         <p class="text-muted">Commencez par ajouter une nouvelle journée de détection</p>
-                                        <a href="?module=detection&action=add" class="btn btn-primary btn-sm">
+                                        <a href="?module=detection&action=create" class="btn btn-primary btn-sm">
                                             <i class="fas fa-plus me-2"></i>Ajouter une détection
                                         </a>
                                     </div>
@@ -174,25 +174,17 @@ ob_start();
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end">
                                                 <li>
-                                                    <a class="dropdown-item" href="?module=admin&action=detection_view&id=<?= $detection['id'] ?>">
+                                                    <a class="dropdown-item" href="?module=detection&action=show&id=<?= $detection['id'] ?>">
                                                         <i class="fas fa-eye me-2 text-info"></i>Voir les détails
                                                     </a>
                                                 </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="?module=detection&action=participants&id=<?= $detection['id'] ?>">
-                                                        <i class="fas fa-users me-2 text-primary"></i>Gérer les participants
-                                                    </a>
-                                                </li>
+                                                
                                                 <li>
                                                     <a class="dropdown-item" href="?module=detection&action=edit&id=<?= $detection['id'] ?>">
                                                         <i class="fas fa-edit me-2 text-warning"></i>Modifier
                                                     </a>
                                                 </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="?module=detection&action=duplicate&id=<?= $detection['id'] ?>">
-                                                        <i class="fas fa-copy me-2 text-secondary"></i>Dupliquer
-                                                    </a>
-                                                </li>
+                                              
                                                 <li><hr class="dropdown-divider"></li>
                                                 <?php if ($detection['status'] !== 'cancelled'): ?>
                                                 <li>
@@ -304,5 +296,5 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php
 $content = ob_get_clean();
 // Inclure le layout
-include __DIR__ . '/../Users/adminl_layout.php';
+include __DIR__ . '/../Admin/adminl_layout.php';
 ?>

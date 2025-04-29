@@ -3,7 +3,7 @@
 <?php
 $content = ob_get_clean();
 // Inclure le layout
-include __DIR__ . '/../Users/adminl_layout.php';
+include __DIR__ . '/../Admin/adminl_layout.php';
 ?>
 
 <?php
@@ -46,11 +46,7 @@ ob_start();
                             <i class="fas fa-file-export me-2 text-success"></i>Exporter les données
                         </a>
                     </li>
-                    <li>
-                        <a class="dropdown-item" href="?module=detection&action=duplicate&id=<?= $detection['id'] ?>">
-                            <i class="fas fa-copy me-2 text-secondary"></i>Dupliquer
-                        </a>
-                    </li>
+                   
                     <li><hr class="dropdown-divider"></li>
                     <?php if ($detection['status'] !== 'cancelled'): ?>
                     <li>
@@ -179,9 +175,7 @@ ob_start();
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-primary">Participants</h6>
-                    <a href="?module=detection&action=participants&id=<?= $detection['id'] ?>" class="btn btn-primary btn-sm">
-                        <i class="fas fa-users me-1"></i> Gérer les participants
-                    </a>
+               
                 </div>
                 <div class="card-body p-0">
                     <?php if (empty($participants)): ?>
@@ -363,13 +357,7 @@ ob_start();
                             </div>
                         </a>
                         <a href="?module=detection&action=send_email&id=<?= $detection['id'] ?>" class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                <div>
-                                    <i class="fas fa-envelope text-primary me-2"></i>
-                                    Envoyer un email aux participants
-                                </div>
-                                <i class="fas fa-chevron-right text-muted"></i>
-                            </div>
+                     
                         </a>
                         <a href="?module=detection&action=export&id=<?= $detection['id'] ?>" class="list-group-item list-group-item-action">
                             <div class="d-flex w-100 justify-content-between align-items-center">

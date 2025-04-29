@@ -17,8 +17,6 @@ class EquipeController {
         require __DIR__ . '/../views/Equipes/list.php';
     }
 
-
-
     public function show($id) {
         $equipe = $this->model->getById($id); // Récupérer les détails de l'équipe
         if (!$equipe) {
@@ -33,15 +31,6 @@ class EquipeController {
         // Inclure une vue qui affichera les détails de l'équipe
         require __DIR__ . '/../views/Equipes/equipe_view.php'; // Créez une vue pour afficher les détails
     }
-    
-
-
-
-
-
-
-    
-
 
     public function edit($id) {
         $equipe = $this->model->getById($id);

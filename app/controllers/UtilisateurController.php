@@ -36,13 +36,13 @@ $this->model = new Utilisateur($pdo);
          require_once __DIR__ . '/../../app/views/Admin/dashboard_admin.php';
         
         } else {
-            // Dashboard pour utilisateur normal
+            if ($_SESSION['user']['role'] === 'joueur') {
          
             require_once __DIR__ . '/../../app/views/Joueurs/dashboard.php';
       
         }
     }
-    
+}
 
     public function show() {
         // Récupérer l'ID depuis l'URL
@@ -304,12 +304,11 @@ public function delete() {
         // Générer un mot de passe aléatoire si nécessaire
        // 1. Génération plus sécurisée du mot de passe
     $newPassword = bin2hex(random_bytes(8)); // 16 caractères aléatoires
-    $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT);
 
         
         // 2. Mise à jour atomique
     $result = $this->model->update($id, [
-        'mot_de_passe' => $hashedPassword,
+        'mot_de_passe' => $newPassword,
         'statut' => 'approuve',
         'is_temp_password' => 1 // Ajoutez ce champ dans votre table
     ]);
@@ -332,14 +331,7 @@ public function delete() {
 
 
 
-//--------------ENVOYER UN MAIL 
-/**
- * Envoie un email de confirmation d'approbation au joueur
- * 
- * @param array $joueur Données du joueur (doit contenir email, nom, prenom)
- * @param string|null $motDePasse Le mot de passe généré (si applicable)
- * @return bool True si l'email a été envoyé avec succès, false sinon
- */
+//--------------ENVOYER UN MAIL -----------------------//
 private function envoyerEmailApprobation($joueur, $motDePasse = null) {
     $mail = new PHPMailer(true);
     
@@ -373,9 +365,10 @@ private function envoyerEmailApprobation($joueur, $motDePasse = null) {
             $message .= "</ul>";
             $message .= "<p>Nous vous recommandons de changer ce mot de passe après votre première connexion.</p>";
         }
-        
-        $message .= "<p>Vous pouvez maintenant vous connecter à votre espace membre : <a href=\"https://votresite.com/connexion\">https://votresite.com/connexion</a></p>";
-        $message .= "<p>Cordialement,<br>L'équipe du club</p>";
+        $siteUrl = "http://localhost/FootballProject/index.php?module=auth&action=login";
+
+$message .= "<p>Vous pouvez maintenant vous connecter à votre espace membre : <a href=\"$siteUrl\">$siteUrl</a></p>";   
+           $message .= "<p>Cordialement,<br>L'équipe du club</p>";
         
         $mail->Body = $message;
         
@@ -399,30 +392,8 @@ private function envoyerEmailApprobation($joueur, $motDePasse = null) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    public function refuser_joueur($id) {
+    public function refuser_joueur() {
+        $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
         // Vérifier que l'ID est valide
         if (!$id || !is_numeric($id)) {
             return false;
@@ -438,57 +409,61 @@ private function envoyerEmailApprobation($joueur, $motDePasse = null) {
         $result = $this->model->updatePlayerStatus($id, 'refuse');
         
         // Envoyer un email de refus
-       // if ($result) {
-          /*  $this->sendRejectionEmail($joueur);
-        }*/
+        if ($result) {
+           $this->sendRejectionEmail($joueur);
+        }
         
         return $result;
     }
     
-    // Admin: Approuver un joueur
-    public function approuver($id) {
-        if (!$this->isAdmin()) {
-            header('Location: index.php?module=utilisateur&action=connexion');
-            exit;
-        }
+    private function sendRejectionEmail($joueur) {
+        $mail = new PHPMailer(true);
         
-        if ($this->model->approuverJoueur($id)) {
-            $_SESSION['message'] = "Le joueur a été approuvé avec succès.";
-            $_SESSION['message_type'] = "success";
-        } else {
-            $_SESSION['message'] = "Erreur lors de l'approbation du joueur.";
-            $_SESSION['message_type'] = "danger";
+        try {
+            // Configuration du serveur SMTP
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+            $mail->Username = 'melissamermouri609@gmail.com';
+            $mail->Password = 'oivwbutiwcswrpsk';
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = 587;
+            
+            // Destinataires
+            $mail->setFrom('melissamermouri609@gmail.com', 'Plus Fort Ensemble');
+            $mail->addAddress($joueur['email'], htmlspecialchars($joueur['prenom'] . ' ' . $joueur['nom']));
+            
+            // Contenu de l'email
+            $mail->isHTML(true);
+            $mail->Subject = 'Concernant votre demande d\'inscription';
+            
+            // Construction du message
+            $message = "<h1>Bonjour {$joueur['prenom']},</h1>";
+            $message .= "<p>Nous vous remercions pour l'intérêt que vous portez à notre club.</p>";
+            $message .= "<p>Après examen de votre demande d'inscription, nous sommes au regret de vous informer que celle-ci n'a pas pu être acceptée pour le moment.</p>";
+            $message .= "<p>Si vous souhaitez avoir plus d'informations concernant cette décision ou si vous pensez qu'il s'agit d'une erreur, n'hésitez pas à nous contacter par retour de mail ou par téléphone.</p>";
+            $message .= "<p>Vous pouvez également soumettre une nouvelle demande après avoir mis à jour vos informations.</p>";
+            $message .= "<p>Cordialement,<br>L'équipe du club Plus Fort Ensemble</p>";
+            
+            $mail->Body = $message;
+            
+            // Version texte pour les clients email qui ne supportent pas HTML
+            $mail->AltBody = "Bonjour {$joueur['prenom']},\n\n"
+                . "Nous vous remercions pour l'intérêt que vous portez à notre club.\n\n"
+                . "Après examen de votre demande d'inscription, nous sommes au regret de vous informer que celle-ci n'a pas pu être acceptée pour le moment.\n\n"
+                . "Si vous souhaitez avoir plus d'informations concernant cette décision ou si vous pensez qu'il s'agit d'une erreur, n'hésitez pas à nous contacter par retour de mail ou par téléphone.\n\n"
+                . "Vous pouvez également soumettre une nouvelle demande après avoir mis à jour vos informations.\n\n"
+                . "Cordialement,\nL'équipe du club Plus Fort Ensemble";
+            
+            $mail->send();
+            return true;
+        } catch (Exception $e) {
+            // Loguer l'erreur
+            error_log("Erreur d'envoi d'email de refus: " . $mail->ErrorInfo);
+            return false;
         }
-        
-        header('Location: index.php?module=utilisateur&action=attente');
-        exit;
     }
     
-    // Admin: Refuser un joueur
-    public function refuser($id) {
-        if (!$this->isAdmin()) {
-            header('Location: index.php?module=utilisateur&action=connexion');
-            exit;
-        }
-        
-        if ($this->model->refuserJoueur($id)) {
-            $_SESSION['message'] = "Le joueur a été refusé.";
-            $_SESSION['message_type'] = "success";
-        } else {
-            $_SESSION['message'] = "Erreur lors du refus du joueur.";
-            $_SESSION['message_type'] = "danger";
-        }
-        
-        header('Location: index.php?module=utilisateur&action=attente');
-        exit;
-    }
-    
-    // Vérification si l'utilisateur est admin
-    private function isAdmin() {
-        session_start();
-        return isset($_SESSION['user']) && $_SESSION['user']['role'] === 'admin';
-    }
-
 
    
     
@@ -557,58 +532,4 @@ private function envoyerEmailApprobation($joueur, $motDePasse = null) {
         
 
 
-        /**
- * Supprime un utilisateur de manière sécurisée
- * 
- * @param int $id ID de l'utilisateur à supprimer
- * @return bool True si suppression réussie, false sinon
- */
-public function deleteUser($id) {
-   
-    // 2. Vérification des droits (seul un admin peut supprimer)
-    if (!$this->isAdmin()) {
-        header('HTTP/1.1 403 Forbidden');
-        return false;
     }
-
-    // 3. Vérification que l'utilisateur existe
-    $user = $this->model->getPlayerById($id);
-    if (!$user) {
-        throw new RuntimeException("Utilisateur introuvable");
-    }
-
-    // 4. Suppression sécurisée en transaction
-    try {
-        // a. D'abord supprimer les dépendances (ex: justificatifs)
-        $this->deleteUserFiles($user);
-
-        // b. Puis supprimer l'utilisateur
-        $success = $this->model->delete($id);
-
-        // c. Log l'action
-        if ($success) {
-            error_log("Utilisateur #$id supprimé par " . $_SESSION['user']['id']);
-        }
-
-        return $success;
-    } catch (Exception $e) {
-        error_log("Erreur suppression utilisateur #$id : " . $e->getMessage());
-        return false;
-    }
-}
-
-/**
- * Supprime les fichiers associés à un utilisateur
- */
-private function deleteUserFiles($user) {
-    if (!empty($user['justificatif'])) {
-        $filePath = '/var/www/secure_storage/justificatifs/' . $user['justificatif'];
-        if (file_exists($filePath)) {
-            unlink($filePath);
-        }
-    }
-}
-
-    }
-
-

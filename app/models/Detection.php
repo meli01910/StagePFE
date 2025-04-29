@@ -43,15 +43,55 @@ class Detection {
 
 
 
-    public function update($id, $nom, $date, $lieu, $partnerClub, $categorie, $maxParticipants, $status) {
-        $stmt = $this->pdo->prepare(
-            "UPDATE detections 
-             SET name = ?, date = ?, location = ?, partner_club = ?, age_category = ?, max_participants = ?, status = ? 
-             WHERE id = ?"
-        );
-        return $stmt->execute([$nom, $date, $lieu, $partnerClub, $categorie, $maxParticipants, $status, $id]);
+    public function update($id, $data) {
+        // Vérifier que l'ID est valide
+        if (!isset($id) || !is_numeric($id)) {
+            return false;
+        }
+        
+        // Construire la requête SQL dynamiquement en fonction des champs fournis
+        $fields = [];
+        $params = [];
+        
+        // Liste des champs autorisés à être mis à jour
+        $allowedFields = [
+            'name', 'date', 'location', 'partner_club', 
+            'age_category', 'max_participants', 'status'
+        ];
+        
+        // Construction des paires champ=valeur pour la requête SQL
+        foreach ($data as $field => $value) {
+            if (in_array($field, $allowedFields)) {
+                $fields[] = "$field = :$field";
+                $params[$field] = $value;
+            }
+        }
+        
+        // Vérifier qu'il y a des champs à mettre à jour
+        if (empty($fields)) {
+            return false;
+        }
+        
+        // Construction de la requête SQL complète
+        $sql = "UPDATE detections SET " . implode(', ', $fields) . " WHERE id = :id";
+        $params['id'] = $id;
+        
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $result = $stmt->execute($params);
+            
+            if ($result) {
+                error_log("Détection ID $id mise à jour avec succès");
+            } else {
+                error_log("Échec de mise à jour de la détection ID $id");
+            }
+            
+            return $result;
+        } catch (\PDOException $e) {
+            error_log("Erreur lors de la mise à jour de la détection ID $id: " . $e->getMessage());
+            return false;
+        }
     }
-    
 
 
     public function delete($id) {

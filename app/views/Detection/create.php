@@ -16,7 +16,7 @@
             </div>
         <?php endif; ?>
         
-        <form action="index.php?module=admin&action=detection_add" method="post">
+        <form action="index.php?module=detection&action=create" method="post">
             <div class="form-group mb-3">
                 <label for="nom">Nom de l'événement</label>
                 <input type="text" id="nom" name="nom" class="form-control" required>
@@ -65,7 +65,7 @@
             
             <div class="form-group mb-3">
                 <button type="submit" class="btn btn-primary">Créer la journée de détection</button>
-                <a href="index.php?module=admin&action=detections" class="btn btn-secondary">Annuler</a>
+                <a href="index.php?module=detection&action=index" class="btn btn-secondary">Annuler</a>
             </div>
         </form>
     </div>

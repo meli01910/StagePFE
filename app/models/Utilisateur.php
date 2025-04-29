@@ -10,9 +10,7 @@ class Utilisateur {
     }
 
     public function update($id, $data) {
-        if (isset($data['mot_de_passe'])) {
-            $data['mot_de_passe'] = password_hash($data['mot_de_passe'], PASSWORD_BCRYPT);
-        }
+ 
         // Vérifier que l'ID est valide
         if (!isset($id) || !is_numeric($id)) {
             return false;
@@ -95,14 +93,6 @@ class Utilisateur {
         }
     }
 
-
-
-
-
-
-
-
-
     public function updatePlayerStatus($id, $statut) {
         if (!in_array($statut, ['approuve', 'refuse'])) {
             return false;
@@ -121,10 +111,7 @@ class Utilisateur {
         }
     }
     
-    public function generatePassword($length = 8) {
-        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
-        return substr(str_shuffle($chars), 0, $length);
-    }
+
     public function getPlayerById($id) {
     $query = "SELECT * FROM utilisateurs WHERE id = :id AND role = 'joueur'";
     $stmt = $this->pdo->prepare($query);
@@ -227,20 +214,7 @@ class Utilisateur {
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
     
-    // Approuver un joueur
-    public function approuverJoueur($id) {
-        $query = "UPDATE utilisateurs SET statut = 'approuve' WHERE id = :id AND role = 'joueur'";
-        $stmt = $this->pdo->prepare($query);
-        return $stmt->execute(['id' => $id]);
-    }
-    
-    // Refuser un joueur
-    public function refuserJoueur($id) {
-        $query = "UPDATE utilisateurs SET statut = 'refuse' WHERE id = :id AND role = 'joueur'";
-        $stmt = $this->pdo->prepare($query);
-        return $stmt->execute(['id' => $id]);
-    }
-    
+
     // Vérifier si un email existe déjà
     public function emailExists($email) {
         $query = "SELECT COUNT(*) FROM utilisateurs WHERE email = :email";

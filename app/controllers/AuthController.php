@@ -13,8 +13,11 @@ class AuthController {
     }
     
     public function login() {
+        error_log("Début de la méthode login");
+        
         // Vérifier si l'utilisateur est déjà connecté
         if (isset($_SESSION['user'])) {
+            error_log("Utilisateur déjà connecté");
             $_SESSION['message'] = "Vous êtes déjà connecté.";
             $_SESSION['message_type'] = "info";
             header('Location: index.php');
@@ -23,32 +26,27 @@ class AuthController {
         
         // Traitement du formulaire de connexion
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            error_log("Formulaire POST reçu");
             $email = $_POST['email'] ?? '';
             $password = $_POST['mot_de_passe'] ?? '';
             
+            error_log("Tentative de connexion avec email: " . $email);
             $user = $this->utilisateurModel->getByEmail($email);
             
-            if ($user && password_verify($password, $user['mot_de_passe'])) {
-                // Vérifier le rôle d'abord
-                if ($user['role'] === 'admin') {
-                    // Les admins peuvent toujours se connecter, peu importe leur statut
-                    $_SESSION['user'] = [
-                        'id' => $user['id'],
-                        'nom' => $user['nom'],
-                        'prenom' => $user['prenom'],
-                        'email' => $user['email'],
-                        'role' => $user['role']
-                    ];
+            if ($user) {
+                error_log("Utilisateur trouvé: ID=" . $user['id'] . ", Statut=" . $user['statut'] . ", Rôle=" . $user['role']);
+                
+                // Test du mot de passe
+                $password_match = password_verify($password, $user['mot_de_passe']);
+                error_log("Vérification du mot de passe: " . ($password_match ? "SUCCÈS" : "ÉCHEC"));
+                
+                if ($password_match) {
+                    error_log("Authentification réussie");
                     
-                    $_SESSION['message'] = "Connexion réussie. Bienvenue " . $user['prenom'] . " " . $user['nom'] . " !";
-                    $_SESSION['message_type'] = "success";
-                    
-                    header('Location: index.php?module=utilisateur&action=dashboard');
-                    exit;
-                } else {
-                    // Pour les non-admins, vérifier le statut du compte
-                    if ($user['statut'] === 'approuve') {
-                        // Compte actif, connexion normale
+                    // Vérifier le rôle d'abord
+                    if ($user['role'] === 'admin') {
+                        error_log("Utilisateur admin - connexion autorisée");
+                        // Les admins peuvent toujours se connecter, peu importe leur statut
                         $_SESSION['user'] = [
                             'id' => $user['id'],
                             'nom' => $user['nom'],
@@ -60,37 +58,87 @@ class AuthController {
                         $_SESSION['message'] = "Connexion réussie. Bienvenue " . $user['prenom'] . " " . $user['nom'] . " !";
                         $_SESSION['message_type'] = "success";
                         
-                        header('Location: index.php?module=auth&action=confirmation');
+                        error_log("Redirection admin vers dashboard");
+                        header('Location: index.php?module=utilisateur&action=dashboard');
                         exit;
-                    } else if ($user['statut'] === 'en_attente') {
-                        // Compte en attente, rediriger vers la page de confirmation
-                        $_SESSION['inscription_reussie'] = true;
-                        $_SESSION['inscription_data'] = [
-                            'nom' => $user['nom'],
-                            'prenom' => $user['prenom'],
-                            'email' => $user['email']
-                        ];
-                         header('Location: index.php?module=auth&action=confirmation');
-                                              exit;
                     } else {
-                        // Compte refusé ou désactivé
-                        $_SESSION['message'] = "Votre compte a été " . 
-                            ($user['statut'] === 'refuse' ? "refusé" : "désactivé") . 
-                            ". Veuillez contacter l'administrateur.";
-                        $_SESSION['message_type'] = "danger";
+                        // Pour les non-admins, vérifier le statut du compte
+                        error_log("Utilisateur non-admin, vérification du statut: " . $user['statut']);
+                        
+                        if ($user['statut'] === 'approuve') {
+                            error_log("Statut approuvé - connexion autorisée");
+                            // Compte actif, connexion normale
+                            $_SESSION['user'] = [
+                                'id' => $user['id'],
+                                'nom' => $user['nom'],
+                                'prenom' => $user['prenom'],
+                                'email' => $user['email'],
+                                'role' => $user['role']
+                            ];
+                            
+                            $_SESSION['message'] = "Connexion réussie. Bienvenue " . $user['prenom'] . " " . $user['nom'] . " !";
+                            $_SESSION['message_type'] = "success";
+                            
+                            // Rediriger selon le rôle
+                            if ($user['role'] === 'joueur') {
+                                error_log("Redirection joueur vers dashboard");
+                                header('Location: index.php?module=utilisateur&action=dashboard');
+                            } else {
+                                error_log("Redirection générique vers dashboard");
+                                // Redirection générique si le rôle n'est pas spécifique
+                                header('Location: index.php?module=utilisateur&action=dashboard');
+                            }
+                            error_log("Exit effectué après redirection");
+                            exit;
+                        } else if ($user['statut'] === 'en_attente') {
+                            error_log("Statut en attente - redirection vers confirmation");
+                            // Compte en attente, rediriger vers la page de confirmation
+                            $_SESSION['inscription_reussie'] = true;
+                            $_SESSION['inscription_data'] = [
+                                'nom' => $user['nom'],
+                                'prenom' => $user['prenom'],
+                                'email' => $user['email']
+                            ];
+                            header('Location: index.php?module=auth&action=confirmation');
+                            exit;
+                        } else {
+                            error_log("Statut non autorisé: " . $user['statut']);
+                            // Compte refusé ou désactivé
+                            $_SESSION['message'] = "Votre compte a été " . 
+                                ($user['statut'] === 'refuse' ? "refusé" : "désactivé") . 
+                                ". Veuillez contacter l'administrateur.";
+                            $_SESSION['message_type'] = "danger";
+                        }
                     }
+                } else {
+                    error_log("Échec de vérification du mot de passe");
+                    error_log("Hash stocké en DB: " . $user['mot_de_passe']);
+                    // Échec de connexion
+                    $_SESSION['message'] = "Identifiants incorrects. Veuillez réessayer.";
+                    $_SESSION['message_type'] = "danger";
                 }
             } else {
+                error_log("Aucun utilisateur trouvé avec l'email: " . $email);
                 // Échec de connexion
                 $_SESSION['message'] = "Identifiants incorrects. Veuillez réessayer.";
                 $_SESSION['message_type'] = "danger";
             }
+        } else {
+            error_log("Affichage du formulaire de connexion (GET)");
+        }
+        
+        // Vérifions l'état actuel de la session
+        error_log("État de la session: " . (isset($_SESSION['user']) ? "Connecté" : "Non connecté"));
+        if (isset($_SESSION['message'])) {
+            error_log("Message en session: " . $_SESSION['message']);
         }
         
         // Afficher le formulaire de connexion
+        error_log("Chargement des vues pour afficher le formulaire");
         require_once __DIR__ . '/../views/templates/header.php';
         require_once __DIR__ . '/../views/Authentification/login.php';
         require_once __DIR__ . '/../views/templates/footer.php';
+        error_log("Fin de la méthode login");
     }
     
     

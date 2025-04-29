@@ -15,7 +15,7 @@
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form method="post" action="index.php?module=admin&action=detection_edit&id=<?= $detection['id'] ?>">
+    <form method="post" action="index.php?module=detection&action=edit&id=<?= $detection['id'] ?>">
         <div class="mb-3">
             <label for="nom" class="form-label">Nom</label>
             <input type="text" class="form-control" id="nom" name="nom" 
@@ -62,7 +62,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary">Enregistrer</button>
-        <a href="index.php?module=admin&action=detections" class="btn btn-secondary">Annuler</a>
+        <a href="index.php?module=detection&action=index" class="btn btn-secondary">Annuler</a>
     </form>
 </div>
 

@@ -112,7 +112,7 @@
                         </div>
                         
                         <div class="mt-3 text-center">
-                            <p>Déjà inscrit? <a href="index.php?module=utilisateur&action=connexion">Se connecter</a></p>
+                            <p>Déjà inscrit? <a href="index.php?module=auth&action=login">Se connecter</a></p>
                         </div>
                     </form>
                 </div>

@@ -37,8 +37,8 @@ function isMenuActive($menuName) {
                 </a>
             </li>
             <li class="nav-item">
-                <a href="index.php?module=utilisateur&action=liste_equipes" class="nav-link px-0 py-2 <?= isMenuActive('equipes') ?>">
-                    <i class="fas fa-users me-2"></i> Equipes
+                <a href="index.php?module=detection&action=index" class="nav-link px-0 py-2 <?= isMenuActive('equipes') ?>">
+                    <i class="fas fa-users me-2"></i> Detections
                 </a>
             </li>
             <li class="nav-item">
