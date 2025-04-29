@@ -170,7 +170,7 @@ if (empty($joueur)) {
                                 <th scope="row">Actions:</th>
                                 <td>
                                     <div class="btn-group">
-                                        <a href="index.php?module=utilisateur&action=approver_joueur&id=<?= $joueur['id'] ?>" class="btn btn-sm btn-success" onclick="return confirm('Confirmer l\'approbation de ce joueur?')">
+                                        <a href="index.php?module=utilisateur&action=Accepter_joueur&id=<?= $joueur['id'] ?>" class="btn btn-sm btn-success" onclick="return confirm('Confirmer l\'approbation de ce joueur?')">
                                             <i class="fas fa-check"></i> Approuver
                                         </a>
                                         <a href="index.php?module=utilisateur&action=refuser_joueur&id=<?= $joueur['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Confirmer le refus de ce joueur?')">

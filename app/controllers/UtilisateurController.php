@@ -286,8 +286,9 @@ public function delete() {
     
 
 
-    public function Accepter_joueur($id) {
+    public function Accepter_joueur() {
         // Vérifier que l'ID est valide
+        $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
         if (!$id || !is_numeric($id)) {
             return false;
         }
