@@ -15,6 +15,7 @@
         "doctrine/orm": "^2.14",
         "doctrine/doctrine-bundle": "^2.14",
         "symfony/mailer": "^6.4",
-        "phpmailer/phpmailer": "^6.9" 
+        "phpmailer/phpmailer": "^6.9",
+        "tecnickcom/tcpdf": "^6.9" 
     }
 }

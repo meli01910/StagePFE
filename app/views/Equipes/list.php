@@ -1,110 +1,165 @@
-
 <?php
-// Fichier: /app/views/Users/dashboard_admin.php
-// S'assurer que l'utilisateur est un admin
-if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
-    header('Location: index.php?module=auth&action=login');
-    exit;
-}
-
-
-
- include __DIR__ . '/../templates/header.php';
-
-// Définir le titre de la page et la page active
-$pageTitle = 'Gestion des Joueurs';
-$currentPage = 'equipes';
 
 // Capturer le contenu
 ob_start();
 ?>
 
-<div class="container-fluid">
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1>Gestion des Équipes</h1>
-                <p class="text-muted">Liste des Equipes</p>
-            </div>
-            <div>
-                
-            </div>
+
+<div class="page-header">
+    <div class="container">
+        <h1> <i class="fas fa-users "></i> Équipes disponibles</h1>
+        <p class="lead">Consultez toutes les équipes </p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="section-header">
+        
+        <h2 class="section-title">Liste des Équipes</h2>
+        <?php if(isset($_SESSION['user']) && $_SESSION['user']['role'] === 'admin'): ?>
+            <a href="?module=equipe&action=create" class="btn-primary">
+                <i class="fas fa-plus"></i> Ajouter une équipe
+            </a>
+        <?php endif; ?>
+    </div>
+
+
+    <!-- Messages flash pour les retours utilisateur -->
+    <?php if (isset($_SESSION['flash_message'])): ?>
+        <div class="flash-message <?= $_SESSION['flash_type'] ?>" role="alert">
+            <?= $_SESSION['flash_message'] ?>
+            <button type="button" class="btn-close" onclick="this.parentElement.style.display='none';">×</button>
         </div>
-
-        <div class="container">
- 
-    <a href="index.php?module=admin&action=equipe_add" class="btn btn-primary mb-3">Créer une équipe</a>
-    
-    <?php if (!empty($_GET['success'])): ?>
-        <div class="alert alert-success">Opération réussie !</div>
+        <?php unset($_SESSION['flash_message'], $_SESSION['flash_type']); ?>
     <?php endif; ?>
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Logo</th>
-                <th>Nom</th>
-                <th>Adresse mail</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
+    <!-- Grille d'équipes -->
+    <div class="equipes-grid">
+        <?php if (empty($equipes)): ?>
+            <div style="grid-column: 1 / -1;">
+                <div class="info-message">
+                    <i class="fas fa-info-circle"></i>
+                    Aucune équipe n'a été créée. Cliquez sur "Nouvelle équipe" pour commencer.
+                </div>
+            </div>
+        <?php else: ?>
             <?php foreach ($equipes as $equipe): ?>
-                <tr>
-                       <td><img src="<?= htmlspecialchars($equipe['logo']) ?>" alt="Logo" style="width: 100px; height: auto;"></td>
-                     
-                       <td><?= htmlspecialchars($equipe['nom']) ?></td>
+                <div class="equipe-card">
+                    <div class="equipe-header">
+                        <!-- Logo de l'équipe -->
+                        <?php if (!empty($equipe['logo'])): ?>
+                            <div class="team-logo-container">
+                                <img src="<?= htmlspecialchars($equipe['logo']) ?>" 
+                                     alt="Logo <?= htmlspecialchars($equipe['nom']) ?>" 
+                                     class="team-logo">
+                            </div>
+                        <?php else: ?>
+                            <div class="team-logo-placeholder">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="equipe-body">
+                        <h5 class="equipe-title">
+                            <?= htmlspecialchars($equipe['nom']) ?>
+                        </h5>
+                        
+                        <div class="equipe-details">
+                            <p>
+                                <i class="fas fa-envelope"></i>
+                                <a href="mailto:<?= htmlspecialchars($equipe['contact_email']) ?>">
+                                    <?= htmlspecialchars($equipe['contact_email']) ?>
+                                </a>
+                            </p>
+                            
+                            <!-- Nombre de joueurs si disponible -->
+                            <?php if (isset($equipe['nb_joueurs'])): ?>
+                                <p>
+                                    <i class="fas fa-user"></i>
+                                    <?= $equipe['nb_joueurs'] ?> joueur<?= $equipe['nb_joueurs'] > 1 ? 's' : '' ?>
+                                </p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
+                    <div class="equipe-footer">
+                        <a href="index.php?module=equipe&action=show&id=<?= $equipe['id'] ?>" 
+                           class="btn-primary">
+                            <i class="fas fa-eye"></i> Détails
+                        </a>
+                        
+                    
+                    </div>
+                </div>
                 
-                       <td><?= htmlspecialchars($equipe['contact_email']) ?></td>
-                       <td>
-                        <a href="index.php?module=admin&action=equipe_view&id=<?= $equipe['id'] ?>" class="btn btn-info">Voir</a>
-                        <a href="index.php?module=admin&action=equipe_edit&id=<?= $equipe['id'] ?>" class="btn btn-warning">Modifier</a>
-                        <a href="index.php?module=admin&action=ajout_joueur&equipe_id=<?= $equipe['id'] ?>" class="btn btn-danger" >Ajouter un joueur</a>
-                    </td>
-                </tr>
+                <!-- Modal de confirmation pour la suppression -->
+                <?php if (isset($_SESSION['user']) && $_SESSION['user']['role'] === 'admin'): ?>
+                    <div class="modal" id="deleteModal<?= $equipe['id'] ?>" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        Confirmer la suppression
+                                    </h5>
+                                    <button type="button" class="btn-close" onclick="closeModal('deleteModal<?= $equipe['id'] ?>')">×</button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Êtes-vous sûr de vouloir supprimer l'équipe <strong><?= htmlspecialchars($equipe['nom']) ?></strong> ?</p>
+                                    <p class="text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Cette action est irréversible et supprimera tous les joueurs associés.
+                                    </p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" onclick="closeModal('deleteModal<?= $equipe['id'] ?>')">Annuler</button>
+                                    <a href="index.php?module=equipe&action=delete&id=<?= $equipe['id'] ?>" class="btn btn-danger">
+                                        <i class="fas fa-trash"></i> Supprimer
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>  
+        <?php endif; ?>
+    </div>
 </div>
 
-</div>
-
+<script>
+    // Fonctions pour les modals
+    function openModal(id) {
+        document.getElementById(id).classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('show');
+        document.body.style.overflow = '';
+    }
+    
+    // Fermer les modals quand on clique en dehors
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            closeModal(event.target.id);
+        }
+    }
+    
+    // Auto-fermeture des messages flash après 5 secondes
+    setTimeout(function() {
+        var flashMessages = document.querySelectorAll('.flash-message');
+        flashMessages.forEach(function(message) {
+            message.style.opacity = '0';
+            setTimeout(function() {
+                message.style.display = 'none';
+            }, 500);
+        });
+    }, 5000);
+</script>
 
 <?php
 $content = ob_get_clean();
 // Inclure le layout
-include __DIR__ . '/../Users/adminl_layout.php';
+include __DIR__ . '/../layout.php';
 ?>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

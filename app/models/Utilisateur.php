@@ -1,7 +1,9 @@
 <?php
 namespace App\models;
 use App\models\PDOException;
-use App\models\PDO;
+
+
+use PDO;
 class Utilisateur {
     private $pdo;
     
@@ -10,56 +12,42 @@ class Utilisateur {
     }
 
     public function update($id, $data) {
- 
-        // Vérifier que l'ID est valide
         if (!isset($id) || !is_numeric($id)) {
             return false;
         }
-
-        
-        // Construire la requête SQL dynamiquement en fonction des champs fournis
+    
         $fields = [];
         $params = [];
-        
-        // Liste des champs autorisés à être mis à jour
+    
         $allowedFields = [
             'nom', 'prenom', 'email', 'telephone', 'poste', 
             'niveau_jeu', 'taille', 'poids', 'nationalite', 
-            'statut', 'date_naissance'
+            'statut', 'date_naissance', 'mot_de_passe',
         ];
-        
-        // Construction des paires champ=valeur pour la requête SQL
+    
         foreach ($data as $field => $value) {
             if (in_array($field, $allowedFields)) {
                 $fields[] = "$field = :$field";
                 $params[$field] = $value;
             }
         }
-        
-        // Si mot de passe fourni, le hasher
-        if (isset($data['mot_de_passe']) && !empty($data['mot_de_passe'])) {
-            $fields[] = "mot_de_passe = :mot_de_passe";
-            $params['mot_de_passe'] = password_hash($data['mot_de_passe'], PASSWORD_DEFAULT);
-        }
-        
-        // Vérifier qu'il y a des champs à mettre à jour
+    
         if (empty($fields)) {
             return false;
         }
-        
-        // Construction de la requête SQL complète
+    
         $sql = "UPDATE utilisateurs SET " . implode(', ', $fields) . " WHERE id = :id AND role = 'joueur'";
         $params['id'] = $id;
-        
+    
         try {
             $stmt = $this->pdo->prepare($sql);
             return $stmt->execute($params);
         } catch (\PDOException $e) {
-            // Enregistrer l'erreur dans un fichier log
             error_log("Erreur lors de la mise à jour du joueur ID $id: " . $e->getMessage());
             return false;
         }
     }
+    
     public function delete($id) {
         $stmt = $this->pdo->prepare("DELETE FROM utilisateurs WHERE id = ?");
         return $stmt->execute([$id]);
@@ -113,8 +101,10 @@ class Utilisateur {
     
 
     public function getPlayerById($id) {
-    $query = "SELECT * FROM utilisateurs WHERE id = :id AND role = 'joueur'";
-    $stmt = $this->pdo->prepare($query);
+     $sql = "SELECT *, TIMESTAMPDIFF(YEAR, date_naissance, CURDATE()) AS age 
+            FROM utilisateurs 
+            WHERE id = :id";
+     $stmt = $this->pdo->prepare($sql);
     $stmt->bindParam(':id', $id, \PDO::PARAM_INT);
     $stmt->execute();
     
@@ -128,9 +118,9 @@ class Utilisateur {
         $mot_de_passe_hash = password_hash($data['mot_de_passe'], PASSWORD_DEFAULT);
         
         $query = "INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, date_naissance, 
-                 telephone, poste, niveau_jeu, taille, poids, nationalite, justificatif, statut) 
+                 telephone, poste, taille, poids, nationalite, justificatif,photo,statut) 
                  VALUES (:nom, :prenom, :email, :mot_de_passe, :date_naissance, 
-                 :telephone, :poste, :niveau_jeu, :taille, :poids, :nationalite, :justificatif, 'en_attente')";
+                 :telephone, :poste, :taille, :poids, :nationalite, :justificatif,:photo, 'en_attente')";
         
         $stmt = $this->pdo->prepare($query);
         $result = $stmt->execute([
@@ -141,11 +131,11 @@ class Utilisateur {
             'date_naissance' => $data['date_naissance'],
             'telephone' => $data['telephone'],
             'poste' => $data['poste'],
-            'niveau_jeu' => $data['niveau_jeu'],
             'taille' => $data['taille'],
             'poids' => $data['poids'],
             'nationalite' => $data['nationalite'],
-            'justificatif' => $data['justificatif']
+            'justificatif' => $data['justificatif'],
+            'photo'=>$data['photo']
         ]);
         
         return $result ? $this->pdo->lastInsertId() : false;
@@ -266,7 +256,11 @@ public function updateStatus($id, $statut) {
 
 // Méthode pour récupérer les détails d'un utilisateur par son ID
 public function getById($id) {
-    $sql = "SELECT * FROM utilisateurs WHERE id = :id";
+    // Ajout du calcul d'âge avec TIMESTAMPDIFF directement dans la requête SQL
+    $sql = "SELECT *, TIMESTAMPDIFF(YEAR, date_naissance, CURDATE()) AS age 
+            FROM utilisateurs 
+            WHERE id = :id";
+    
     $stmt = $this->pdo->prepare($sql);
     $stmt->execute(['id' => $id]);
     return $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -305,9 +299,9 @@ public function getStatistics() {
  * @return array La liste des joueurs
  */
 public function getAllPlayers() {
-    $query = "SELECT id, nom, prenom, email, telephone, poste as position, 
+    $query = "SELECT id, nom, prenom, email, telephone, poste as poste, 
     niveau_jeu, taille, poids, nationalite, statut,
-    date_naissance, date_creation, justificatif 
+    date_naissance, date_creation, justificatif,photo,TIMESTAMPDIFF(YEAR, date_naissance, CURDATE()) AS age
     FROM utilisateurs 
     WHERE role = 'joueur' 
     ORDER BY nom ASC";
@@ -317,10 +311,17 @@ public function getAllPlayers() {
     return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 }
 
+
+
 public function getJoueursByEquipe($equipeId) {
     $stmt = $this->pdo->prepare("SELECT * FROM utilisateurs WHERE equipe_id = :equipe_id");
     $stmt->execute(['equipe_id' => $equipeId]);
     return $stmt->fetchAll();
 }
+
+
+
+
+
 
 }

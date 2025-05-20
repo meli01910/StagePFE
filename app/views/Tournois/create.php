@@ -23,12 +23,12 @@
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Créer un nouveau tournoi</h1>
-            <a href="index.php?module=admin&action=list_tournois" class="btn btn-secondary">Retour à la liste</a>
+            <a href="index.php?module=tournoi&action=index" class="btn btn-secondary">Retour à la liste</a>
         </div>
 
         <div class="card">
             <div class="card-body">
-                <form action="index.php?module=admin&action=tournoi_add" method="post">
+                <form action="index.php?module=tournoi&action=create" method="post">
                     <!-- Informations du tournoi -->
                     <h4 class="mb-3">Informations du tournoi</h4>
                     <div class="mb-3">
@@ -50,13 +50,15 @@
                         </div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-4">
+                        
+                         <div class="col-md-4">
                             <label for="format" class="form-label">Format</label>
                             <select class="form-select" id="format" name="format" required>
-                                <option value="">Choisir un format</option>
-                                <option value="Poules">Poules</option>
-                                <option value="Élimination directe">Élimination directe</option>
-                                <option value="Poules + élimination directe">Poules + élimination directe</option>
+                                <option value="">Choisir une format</option>
+                                <option value="championnat">championnat</option>
+                                <option value="poules">poules</option>
+                                <option value="coupe">coupe</option>
+                                
                             </select>
                         </div>
                         <div class="col-md-4">

@@ -9,9 +9,6 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
     exit;
 }
 
-
-
- include __DIR__ . '/../templates/header.php';
 // Définir le titre et la page active
 // Définir le titre de la page et la page active
 $pageTitle = 'Gestion des Joueurs';
@@ -43,7 +40,7 @@ ob_start();
                                 Aucune équipe n'est disponible pour l'inscription.
                             </div>
                         <?php else: ?>
-                            <form action="index.php?module=admin&action=ajouterEquipe&id=<?= $tournoi_id ?>" method="POST">
+                            <form action="index.php?module=tournoi&action=ajouterEquipe&id=<?= $tournoi_id ?>" method="POST">
                                 <div class="table-responsive">
                                     <table class="table table-striped table-hover">
                                         <thead>
@@ -107,5 +104,5 @@ ob_start();
     <?php
 $content = ob_get_clean();
 // Inclure le layout
-include __DIR__ . '/../Users/adminl_layout.php';
+include __DIR__ . '/../layout.php';
 ?>

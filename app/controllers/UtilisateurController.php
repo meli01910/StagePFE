@@ -17,32 +17,7 @@ public function __construct($pdo) {
 $this->model = new Utilisateur($pdo);
 }
 
-    public function dashboard() {
-        $detectionController = new \App\controllers\DetectionController($this->pdo);
-        $tournoiController = new \App\controllers\TournoiController($this->pdo);
-        $matchController = new MatchController($this->pdo);
-    
-        // Vérifier que l'utilisateur est connecté
-        if (!isset($_SESSION['user'])) {
-            $_SESSION['message'] = "Veuillez vous connecter.";
-            $_SESSION['message_type'] = "warning";
-            header('Location: index.php?module=auth&action=login');
-            exit;
-        }
-        
-        // Séparer les vues selon le rôle
-        if ($_SESSION['user']['role'] === 'admin') {
 
-         require_once __DIR__ . '/../../app/views/Admin/dashboard_admin.php';
-        
-        } else {
-            if ($_SESSION['user']['role'] === 'joueur') {
-         
-            require_once __DIR__ . '/../../app/views/Joueurs/dashboard.php';
-      
-        }
-    }
-}
 
     public function show() {
         // Récupérer l'ID depuis l'URL
@@ -65,7 +40,7 @@ $this->model = new Utilisateur($pdo);
         }
         
         // Afficher le joueur (par exemple avec une vue)
-        require_once __DIR__ . '/../views/Admin/joueur_details.php';
+        require_once __DIR__ . '/../views/Joueurs/joueur_details.php';
     }
 
 /**
@@ -92,7 +67,7 @@ public function edit() {
     }
  
       // Afficher le joueur (par exemple avec une vue)
-      require_once __DIR__ . '/../views/Admin/joueur_edit.php';
+      require_once __DIR__ . '/../views/Joueurs/joueur_edit.php';
  
   
 }
@@ -124,7 +99,6 @@ public function update() {
         'email' => filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL),
         'telephone' => trim(htmlspecialchars($_POST['telephone'] ?? '')),
         'poste' => trim(htmlspecialchars($_POST['poste'] ?? '')),
-        'niveau_jeu' => trim(htmlspecialchars($_POST['niveau_jeu'] ?? '')),
         'taille' => !empty($_POST['taille']) ? floatval($_POST['taille']) : null,
         'poids' => !empty($_POST['poids']) ? floatval($_POST['poids']) : null,
         'nationalite' => trim(htmlspecialchars($_POST['nationalite'] ?? '')),
@@ -185,7 +159,7 @@ public function delete() {
         $joueurs = $this->model->getAllPlayers();
         
         // Inclut la vue pour afficher la liste des joueurs
-        include __DIR__ . '/../views/Admin/liste_joueurs.php';
+        include __DIR__ . '/../views/Joueurs/liste_joueurs.php';
     }
       
 
@@ -286,46 +260,41 @@ public function delete() {
     
 
 
-    public function Accepter_joueur() {
-        // Vérifier que l'ID est valide
-        $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-        if (!$id || !is_numeric($id)) {
-            return false;
-        }
-        $joueur = $this->model->getPlayerById($id);
-    
-        
-        // Vérifier que le joueur existe et est en attente
-        
-        if (!$joueur || $joueur['statut'] !== 'en_attente') {
-            return false;
-        }
-        
-        // Générer un mot de passe aléatoire si nécessaire
-       // 1. Génération plus sécurisée du mot de passe
-    $newPassword = bin2hex(random_bytes(8)); // 16 caractères aléatoires
+ public function Accepter_joueur() {
+    $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+    if (!$id || !is_numeric($id)) {
+        return false;
+    }
 
-        
-        // 2. Mise à jour atomique
+    $joueur = $this->model->getPlayerById($id);
+
+    if (!$joueur || $joueur['statut'] !== 'en_attente') {
+        return false;
+    }
+
+    // Générer un mot de passe aléatoire
+    $newPassword = bin2hex(random_bytes(8)); // 16 caractères
+    $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+
     $result = $this->model->update($id, [
-        'mot_de_passe' => $newPassword,
+        'mot_de_passe' => $hashedPassword, // Hashed ICI
         'statut' => 'approuve',
-        'is_temp_password' => 1 // Ajoutez ce champ dans votre table
+        'is_temp_password' => 1 
     ]);
 
     if ($result) {
-        // 3. Sécurisation des données avant envoi
         $this->envoyerEmailApprobation([
             'email' => $joueur['email'],
             'prenom' => htmlspecialchars($joueur['prenom']),
             'nom' => htmlspecialchars($joueur['nom'])
-        ], $newPassword);
-    }
-   
+        ], $newPassword); // Mot de passe EN CLAIR envoyé ici
         
-        
-        return $result;
     }
+
+    return $result;
+    
+}
+
 
 
 

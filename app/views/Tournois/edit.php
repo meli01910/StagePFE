@@ -1,7 +1,7 @@
-<?php require __DIR__ . '/../templates/header.php'; ?>
 
-<body>
-    <div class="container mt-4">
+<?php
+ob_start();
+?> <div class="container mt-4">
         <h1 class="mb-4">Modifier le tournoi</h1>
 
         <?php if (isset($_GET['error'])): ?>
@@ -41,14 +41,7 @@
                     </div>
 
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="format" class="form-label">Format</label>
-                            <select class="form-select" id="format" name="format" required>
-                                <option value="elimination" <?= $tournoi['format'] === 'elimination' ? 'selected' : '' ?>>Élimination directe</option>
-                                <option value="poules" <?= $tournoi['format'] === 'poules' ? 'selected' : '' ?>>Poules + phase finale</option>
-                                <option value="mixte" <?= $tournoi['format'] === 'mixte' ? 'selected' : '' ?>>Format mixte</option>
-                            </select>
-                        </div>
+                 
 
                         <!-- Ajout du champ Catégorie -->
                         <div class="mb-3">
@@ -116,5 +109,9 @@
             }
         });
     </script>
-</body>
-</html>
+
+<?php
+$content = ob_get_clean();
+// Inclure le layout
+include __DIR__ . '/../layout.php';
+?>

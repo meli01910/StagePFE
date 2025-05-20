@@ -2,6 +2,7 @@
 namespace App\models;
 use PDO;
 use PDOException;
+use Exception;
 class Tournoi {
     private $pdo;
 
@@ -10,12 +11,33 @@ class Tournoi {
     }
 
     // Créer un tournoi
-    public function create($nom, $lieu, $dateDebut, $dateFin, $format, $categorie, $nbEquipes) {
-        $sql = "INSERT INTO tournois (nom, lieu, date_debut, date_fin, format, categorie, nb_equipes_max) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([$nom, $lieu, $dateDebut, $dateFin, $format, $categorie, $nbEquipes]);
-    }
+ /**
+ * Crée un nouveau tournoi
+ * @param string $nom Nom du tournoi
+ * @param string $lieu Lieu où se déroule le tournoi
+ * @param string $dateDebut Date de début (format YYYY-MM-DD)
+ * @param string $dateFin Date de fin (format YYYY-MM-DD)
+ * @param string $categorie Catégorie du tournoi
+ * @param int $nbEquipes Nombre maximum d'équipes
+ * @return int|bool L'ID du tournoi créé ou false en cas d'échec
+ */
+/**
+ * Crée un nouveau tournoi
+ * @param string $nom Nom du tournoi
+ * @param string $lieu Lieu où se déroule le tournoi
+ * @param string $dateDebut Date de début (format YYYY-MM-DD)
+ * @param string $dateFin Date de fin (format YYYY-MM-DD)
+ * @param string $categorie Catégorie du tournoi
+ * @param int $nbEquipes Nombre maximum d'équipes
+ * @return bool True si l'insertion a réussi, False sinon
+ */
+public function create($nom, $lieu, $dateDebut, $dateFin, $categorie, $nbEquipes,$format) {
+    $sql = "INSERT INTO tournois (nom, lieu, date_debut, date_fin, categorie, nb_equipes_max,format) 
+            VALUES (?, ?, ?, ?, ?, ?,?)";
+    $stmt = $this->pdo->prepare($sql);
+    return $stmt->execute([$nom, $lieu, $dateDebut, $dateFin, $categorie, $nbEquipes,$format]);
+}
+
 
     // Lister tous les tournois
     public function getAll() {
@@ -37,41 +59,22 @@ class Tournoi {
                 lieu = ?,
                 date_debut = ?,
                 date_fin = ?,
-                format = ?,
                 categorie = ?,
                 nb_equipes_max = ?,
                 statut = ?
                 WHERE id = ?";
         
         $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([$nom, $lieu, $dateDebut, $dateFin, $format, $categorie, $nbEquipes, $statut, $id]);
+        return $stmt->execute([$nom, $lieu, $dateDebut, $dateFin,  $categorie, $nbEquipes, $statut, $id]);
     }
+
 
     // Supprimer un tournoi
     public function delete($id) {
-        // D'abord supprimer les dépendances (équipes, matchs)
-        $this->pdo->beginTransaction();
-        
-        try {
-            // 1. Supprimer les matchs associés
-            $stmt = $this->pdo->prepare("DELETE FROM matchs WHERE tournoi_id = ?");
-            $stmt->execute([$id]);
-            
-            // 2. Supprimer les équipes associées
-            $stmt = $this->pdo->prepare("DELETE FROM equipes WHERE tournoi_id = ?");
-            $stmt->execute([$id]);
-            
-            // 3. Supprimer le tournoi
-            $stmt = $this->pdo->prepare("DELETE FROM tournois WHERE id = ?");
-            $stmt->execute([$id]);
-            
-            $this->pdo->commit();
-            return true;
-        } catch (PDOException $e) {
-            $this->pdo->rollBack();
-            error_log("Erreur suppression tournoi: " . $e->getMessage());
-            return false;
-        }
+           $stmt = $this->pdo->prepare("DELETE FROM tournois WHERE id = ?");
+           return $stmt->execute([$id]);
+          
+       
     }
 
     // Filtrer par statut
@@ -83,156 +86,311 @@ class Tournoi {
 
     // Compter le nombre d'équipes inscrites
     public function countTeams($tournoiId) {
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM equipes WHERE tournoi_id = ?");
-        $stmt->execute([$tournoiId]);
-        return $stmt->fetchColumn();
-    }
-
-
-
- /****************GENERATIONS DE GROUPES - MATCHES**************************************** */   
- 
-
-  // Créer une poule
-public function creerPoule($tournoiId, $nom) {
-    $stmt = $this->pdo->prepare("INSERT INTO poules (tournoi_id, nom) VALUES (?, ?)");
-    $stmt->execute([$tournoiId, $nom]);
-    return $this->pdo->lastInsertId();
-}
-// Assigner une équipe à une poule
-public function assignerEquipePoule($pouleId, $equipeId) {
-    $stmt = $this->pdo->prepare("INSERT INTO equipe_poule (poule_id, equipe_id) VALUES (?, ?)");
-    return $stmt->execute([$pouleId, $equipeId]);
-}
-
-
-// Générer les poules pour un tournoi
-public function genererPoules($tournoiId, $nbPoules) {
-    // Vérifier que le nombre de poules est valide
-    if (!in_array($nbPoules, [2, 4, 8])) {
-        throw new \Exception("Le nombre de poules doit être 2, 4 ou 8");
+        try {
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM tournoi_equipe WHERE tournoi_id = ?");
+            $stmt->execute([$tournoiId]);
+            return $stmt->fetchColumn();
+        } catch (PDOException $e) {
+            error_log("Erreur lors du comptage des équipes pour le tournoi #$tournoiId: " . $e->getMessage());
+            return 0;
+        }
     }
     
-    // Commencer une transaction
-    $this->pdo->beginTransaction();
-    
+
+/**
+ * Récupérer les tournois à venir
+ * 
+ * @param int $limit Le nombre maximum de tournois à récupérer
+ * @return array Les tournois à venir
+ */
+public function getUpcomingTournois($limit = 5) {
     try {
-        // Supprimer les anciennes poules si elles existent
-        $this->supprimerPoules($tournoiId);
+        $today = date('Y-m-d');
+        $sql = "SELECT * FROM tournois 
+                WHERE date_debut >= :today 
+                ORDER BY date_debut ASC 
+                LIMIT :limit";
         
-        // Récupérer toutes les équipes du tournoi
-        $stmt = $this->pdo->prepare("SELECT * FROM equipes WHERE tournoi_id = ?");
-        $stmt->execute([$tournoiId]);
-        $equipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindParam(':today', $today);
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
         
-        // Vérifier qu'il y a assez d'équipes
-        if (count($equipes) < $nbPoules * 2) {
-            throw new \Exception("Il n'y a pas assez d'équipes pour créer " . $nbPoules . " poules");
+        $tournois = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Pour chaque tournoi, ajouter le nombre d'équipes inscrites
+        foreach ($tournois as &$tournoi) {
+            $tournoi['places_prises'] = $this->countTeams($tournoi['id']);
+            $tournoi['places_restantes'] = $tournoi['nb_equipes_max'] - $tournoi['places_prises'];
         }
         
-        // Mélanger les équipes pour une répartition aléatoire
-        shuffle($equipes);
+        return $tournois;
+    } catch (PDOException $e) {
+        error_log("Erreur lors de la récupération des tournois à venir : " . $e->getMessage());
+        return [];
+    }
+}
+
+
+public function getGroupesByTournoiId($tournoiId) {
+    $stmt = $this->pdo->prepare("
+        SELECT * FROM groupes WHERE tournoi_id = ? ORDER BY nom
+    ");
+    $stmt->execute([$tournoiId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+public function allGroupMatchesCompleted($tournoiId) {
+    $stmt = $this->pdo->prepare("
+        SELECT COUNT(*) as total FROM matchs m
+        JOIN groupes g ON m.groupe_id = g.id
+        WHERE g.tournoi_id = ? AND m.statut != 'terminé'
+    ");
+    $stmt->execute([$tournoiId]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Si le nombre de matchs non terminés est 0, alors tous sont terminés
+    return $result['total'] == 0;
+}
+
+
+
+
+
+
+
+
+public function getGroupStandings($groupeId) {
+    // 1. Récupérer toutes les équipes du groupe
+    $stmt = $this->pdo->prepare("
+        SELECT eg.equipe_id, e.nom
+        FROM groupe_equipe eg
+        JOIN equipes e ON eg.equipe_id = e.id
+        WHERE eg.groupe_id = ?
+    ");
+    $stmt->execute([$groupeId]);
+    $equipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // 2. Pour chaque équipe, calculer ses stats
+    foreach ($equipes as &$equipe) {
+        $equipeId = $equipe['equipe_id'];
         
-        // Créer les poules
-        $poules = [];
-        $lettres = range('A', 'Z');
+        // Initialiser les stats
+        $equipe['points'] = 0;
+        $equipe['joues'] = 0;
+        $equipe['gagnes'] = 0;
+        $equipe['nuls'] = 0;
+        $equipe['perdus'] = 0;
+        $equipe['buts_pour'] = 0;
+        $equipe['buts_contre'] = 0;
         
-        for ($i = 0; $i < $nbPoules; $i++) {
-            $nomPoule = "Poule " . $lettres[$i];
-            $pouleId = $this->creerPoule($tournoiId, $nomPoule);
-            $poules[] = $pouleId;
-        }
+        // Récupérer tous les matchs terminés de l'équipe dans ce groupe
+        $stmt = $this->pdo->prepare("
+            SELECT m.*, g.id as groupe_id
+            FROM matchs m
+            JOIN groupes g ON m.groupe_id = g.id
+            WHERE g.id = ? 
+            AND (m.equipe1_id = ? OR m.equipe2_id = ?)
+            AND m.statut = 'terminé'
+        ");
+        $stmt->execute([$groupeId, $equipeId, $equipeId]);
+        $matchs = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Répartir les équipes dans les poules
-        $nbEquipesParPoule = floor(count($equipes) / $nbPoules);
-        $equipesRestantes = count($equipes) % $nbPoules;
-        
-        $index = 0;
-        
-        for ($i = 0; $i < $nbPoules; $i++) {
-            $nbEquipesDansCettePoule = $nbEquipesParPoule + ($i < $equipesRestantes ? 1 : 0);
+        // Calculer les statistiques
+        foreach ($matchs as $match) {
+            $equipe['joues']++;
             
-            for ($j = 0; $j < $nbEquipesDansCettePoule; $j++) {
-                if ($index < count($equipes)) {
-                    $this->assignerEquipePoule($poules[$i], $equipes[$index]['id']);
-                    $index++;
+            if ($match['equipe1_id'] == $equipeId) {
+                // L'équipe joue à domicile
+                $equipe['buts_pour'] += $match['score1'];
+                $equipe['buts_contre'] += $match['score2'];
+                
+                if ($match['score1'] > $match['score2']) {
+                    $equipe['gagnes']++;
+                    $equipe['points'] += 3;
+                } elseif ($match['score1'] == $match['score2']) {
+                    $equipe['nuls']++;
+                    $equipe['points'] += 1;
+                } else {
+                    $equipe['perdus']++;
+                }
+                
+            } else {
+                // L'équipe joue à l'extérieur
+                $equipe['buts_pour'] += $match['score2'];
+                $equipe['buts_contre'] += $match['score1'];
+                
+                if ($match['score2'] > $match['score1']) {
+                    $equipe['gagnes']++;
+                    $equipe['points'] += 3;
+                } elseif ($match['score1'] == $match['score2']) {
+                    $equipe['nuls']++;
+                    $equipe['points'] += 1;
+                } else {
+                    $equipe['perdus']++;
                 }
             }
         }
         
-        // Marquer les poules comme générées
-        $this->marquerPoulesGenerees($tournoiId, true);
+        // Calculer la différence de buts
+        $equipe['diff_buts'] = $equipe['buts_pour'] - $equipe['buts_contre'];
+    }
+    
+    // 3. Trier les équipes par points, puis différence de buts, puis buts marqués
+    usort($equipes, function($a, $b) {
+        // D'abord par points
+        if ($b['points'] != $a['points']) {
+            return $b['points'] - $a['points'];
+        }
+        // Ensuite par différence de buts
+        if ($b['diff_buts'] != $a['diff_buts']) {
+            return $b['diff_buts'] - $a['diff_buts'];
+        }
+        // Puis par buts marqués
+        return $b['buts_pour'] - $a['buts_pour'];
+    });
+    
+    return $equipes;
+}
+
+
+
+
+
+
+
+
+public function knockoutStageExists($tournoiId) {
+    $stmt = $this->pdo->prepare("
+        SELECT COUNT(*) as count FROM matchs 
+        WHERE tournoi_id = ? AND phase != 'groupe'
+    ");
+    $stmt->execute([$tournoiId]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result['count'] > 0;
+}
+
+public function createKnockoutStage($tournoiId) {
+    // 1. Obtenir tous les groupes du tournoi
+    $groupes = $this->getGroupesByTournoiId($tournoiId);
+    
+    // 2. Déterminer le nombre d'équipes qualifiées (2 par groupe)
+    $nombreEquipesQualifiees = count($groupes) * 2;
+    
+    // 3. Déterminer la phase initiale (1/8 de finale, 1/4 de finale, etc.)
+    $phaseInitiale = $this->determinerPhaseInitiale($nombreEquipesQualifiees);
+    
+    // 4. Récupérer les équipes qualifiées (2 premières de chaque groupe)
+    $equipesQualifiees = [];
+    foreach ($groupes as $groupe) {
+        $classement = $this->getGroupStandings($groupe['id']);
+        // Prendre les 2 premières équipes
+        if (count($classement) >= 2) {
+            $equipesQualifiees[] = $classement[0]; // 1er du groupe
+            $equipesQualifiees[] = $classement[1]; // 2e du groupe
+        }
+    }
+    
+    // 5. Créer les matchs de la première phase à élimination directe
+    $this->pdo->beginTransaction();
+    
+    try {
+        // Générer les matchs selon le format: 1er groupe A vs 2e groupe B, etc.
+        for ($i = 0; $i < count($equipesQualifiees); $i += 4) {
+            // 1er du groupe i/2 contre 2e du groupe i/2+1
+            $this->createKnockoutMatch(
+                $tournoiId,
+                $equipesQualifiees[$i]['equipe_id'],      // 1er groupe A
+                $equipesQualifiees[$i+3]['equipe_id'],    // 2e groupe B
+                $phaseInitiale,
+                1 + ($i/4)                                // Numéro du match
+            );
+            
+            // 1er du groupe i/2+1 contre 2e du groupe i/2
+            $this->createKnockoutMatch(
+                $tournoiId,
+                $equipesQualifiees[$i+2]['equipe_id'],    // 1er groupe B
+                $equipesQualifiees[$i+1]['equipe_id'],    // 2e groupe A
+                $phaseInitiale,
+                2 + ($i/4)                                // Numéro du match
+            );
+        }
+        
+        // Créer les emplacements pour les phases suivantes (1/4, 1/2, finale)
+        $this->createNextRounds($tournoiId, $phaseInitiale, $nombreEquipesQualifiees);
         
         $this->pdo->commit();
         return true;
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         $this->pdo->rollBack();
-        throw $e;
+        error_log($e->getMessage());
+        return false;
     }
 }
 
-// Marquer qu'un tournoi a ses poules générées
-public function marquerPoulesGenerees($tournoiId, $etat = true) {
-    $stmt = $this->pdo->prepare("UPDATE tournois SET poules_generees = ? WHERE id = ?");
-    return $stmt->execute([$etat ? 1 : 0, $tournoiId]);
+private function determinerPhaseInitiale($nombreEquipes) {
+    if ($nombreEquipes >= 16) return '1/8';
+    if ($nombreEquipes >= 8) return '1/4';
+    if ($nombreEquipes >= 4) return '1/2';
+    return 'finale';
 }
 
-// Supprimer les poules d'un tournoi
-public function supprimerPoules($tournoiId) {
-    // Supprimer les matchs des poules
+private function createKnockoutMatch($tournoiId, $equipe1Id, $equipe2Id, $phase, $numeroMatch) {
     $stmt = $this->pdo->prepare("
-        DELETE FROM matchs 
-        WHERE tournoi_id = ? AND poule_id IS NOT NULL
+        INSERT INTO matchs (tournoi_id, equipe1_id, equipe2_id, phase, numero_match, statut, date_match, created_at)
+        VALUES (?, ?, ?, ?, ?, 'à_venir', DATE_ADD(NOW(), INTERVAL 1 DAY), NOW())
     ");
-    $stmt->execute([$tournoiId]);
-    
-    // Récupérer les IDs des poules du tournoi
-    $stmt = $this->pdo->prepare("SELECT id FROM poules WHERE tournoi_id = ?");
-    $stmt->execute([$tournoiId]);
-    $poules = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Supprimer les associations équipe-poule
-    foreach ($poules as $poule) {
-        $stmt = $this->pdo->prepare("DELETE FROM equipe_poule WHERE poule_id = ?");
-        $stmt->execute([$poule['id']]);
-    }
-    
-    // Supprimer les poules
-    $stmt = $this->pdo->prepare("DELETE FROM poules WHERE tournoi_id = ?");
-    $success = $stmt->execute([$tournoiId]);
-    
-    if ($success) {
-        $this->marquerPoulesGenerees($tournoiId, false);
-    }
-    
-    return $success;
+    $stmt->execute([$tournoiId, $equipe1Id, $equipe2Id, $phase, $numeroMatch]);
+    return $this->pdo->lastInsertId();
 }
-// Récupérer les poules d'un tournoi
-public function getPoulesWithEquipesByTournoi($tournoiId) {
-    $stmt = $this->pdo->prepare("
-        SELECT p.id, p.nom, p.tournoi_id
-        FROM poules p
-        WHERE p.tournoi_id = ?
-    ");
-    $stmt->execute([$tournoiId]);
-    $poules = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+private function createNextRounds($tournoiId, $phaseInitiale, $nombreEquipes) {
+    $phases = ['1/8', '1/4', '1/2', 'finale'];
+    $phaseIndex = array_search($phaseInitiale, $phases);
     
-    foreach ($poules as &$poule) {
+    // Créer les matchs pour les phases suivantes
+    for ($i = $phaseIndex + 1; $i < count($phases); $i++) {
+        $phase = $phases[$i];
+        $nombreMatchs = pow(2, count($phases) - $i - 1);
+        
+        for ($j = 1; $j <= $nombreMatchs; $j++) {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO matchs (tournoi_id, phase, numero_match, statut, date_match, created_at)
+                VALUES (?, ?, ?, 'à_venir', DATE_ADD(NOW(), INTERVAL ? DAY), NOW())
+            ");
+            $stmt->execute([$tournoiId, $phase, $j, ($i-$phaseIndex)+1]);
+        }
+    }
+}
+
+public function getKnockoutMatches($tournoiId) {
+    $phases = ['1/8', '1/4', '1/2', 'finale'];
+    $result = [];
+    
+    foreach ($phases as $phase) {
         $stmt = $this->pdo->prepare("
-            SELECT e.* 
-            FROM equipes e
-            JOIN equipe_poule ep ON e.id = ep.equipe_id
-            WHERE ep.poule_id = ?
+            SELECT m.*, 
+                   e1.nom as equipe1_nom, 
+                   e2.nom as equipe2_nom
+            FROM matchs m
+            LEFT JOIN equipes e1 ON m.equipe1_id = e1.id
+            LEFT JOIN equipes e2 ON m.equipe2_id = e2.id
+            WHERE m.tournoi_id = ? AND m.phase = ?
+            ORDER BY m.numero_match
         ");
-        $stmt->execute([$poule['id']]);
-        $poule['equipes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute([$tournoiId, $phase]);
+        $matchs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (count($matchs) > 0) {
+            $result[$phase] = $matchs;
+        }
     }
     
-    return $poules;
+    return $result;
 }
 
 
 
 
- 
+
 }
