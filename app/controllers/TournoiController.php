@@ -309,7 +309,7 @@ public function ajouterEquipe() {
             }
         }
         
-        header("Location: index.php?module=tournoi&action=show&id=$tournoi_id");
+        header("Location: index.php?module=tournoi&action=organiser&id=$tournoi_id");
         exit;
     }
     
@@ -523,9 +523,6 @@ public function showClassement() {
 
 
 
-
-
-
 public function genererPhaseFinale($tournoiId) {
     // Vérifier les autorisations
     if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
@@ -550,7 +547,7 @@ public function genererPhaseFinale($tournoiId) {
     
     // Structure de progression des phases
     $structurePhases = [
-        'Phase de groupes' => 'Huitièmes de finale',
+        'Phase de groupes' => 'Huitièmes de finale', // Modification pour commencer par les 1/8 si besoin
         'Huitièmes de finale' => 'Quarts de finale',
         'Quarts de finale' => 'Demi-finales',
         'Demi-finales' => 'Finale'
@@ -576,7 +573,7 @@ public function genererPhaseFinale($tournoiId) {
     }
     
     // Si c'est la phase de groupes, récupérer les équipes qualifiées des groupes
-    $equipesAQualifier = [];
+    $equipesQualifiees = [];
     
     if ($phaseActuelle === 'Phase de groupes') {
         // Collectez les groupes du tournoi
@@ -589,11 +586,112 @@ public function genererPhaseFinale($tournoiId) {
             exit();
         }
         
-        // Collectez les équipes qualifiées de chaque groupe (généralement 2 par groupe)
+        // Déterminer quelle phase générer en fonction du nombre de groupes et d'équipes qualifiées
+        $nbGroupes = count($groupes);
+        $nbEquipesParGroupe = 2; // Nombre d'équipes qualifiées par groupe
+        $totalEquipesQualifiees = $nbGroupes * $nbEquipesParGroupe;
+        
+        if ($totalEquipesQualifiees == 16) {
+            $phaseProchaine = 'Huitièmes de finale';
+        } elseif ($totalEquipesQualifiees == 8) {
+            $phaseProchaine = 'Quarts de finale';
+        } elseif ($totalEquipesQualifiees == 4) {
+            $phaseProchaine = 'Demi-finales';
+        } elseif ($totalEquipesQualifiees == 2) {
+            $phaseProchaine = 'Finale';
+        }
+        
+        // Structure pour organiser les qualifiés par groupe
+        $qualifiesParGroupe = [];
+        
+        // Collectez les équipes qualifiées de chaque groupe avec leur classement
         foreach ($groupes as $groupe) {
-            $qualifiees = $this->groupModel->getQualifiedTeams($groupe['id'], 2);
-            foreach ($qualifiees as $equipe) {
-                $equipesAQualifier[] = $equipe;
+            $qualifiees = $this->groupModel->getQualifiedTeams($groupe['id'], $nbEquipesParGroupe);
+            $qualifiesParGroupe[$groupe['nom']] = $qualifiees;
+        }
+        
+        // Organiser les matchs selon le format standard des tournois
+        // Par exemple, pour 8 groupes (A à H), les huitièmes de finale sont:
+        // 1A vs 2B, 1C vs 2D, 1E vs 2F, 1G vs 2H, 1B vs 2A, 1D vs 2C, 1F vs 2E, 1H vs 2G
+        
+        if ($phaseProchaine === 'Huitièmes de finale' && $nbGroupes === 8) {
+            // Format standard pour 8 groupes (Coupe du Monde, Euro)
+            $affrontements = [
+                ['1A', '2B'], ['1C', '2D'], ['1E', '2F'], ['1G', '2H'],
+                ['1B', '2A'], ['1D', '2C'], ['1F', '2E'], ['1H', '2G']
+            ];
+            
+            foreach ($affrontements as $match) {
+                $groupe1 = substr($match[0], 1); // A, B, C, etc.
+                $position1 = intval(substr($match[0], 0, 1)) - 1; // 0 pour 1er, 1 pour 2e
+                
+                $groupe2 = substr($match[1], 1);
+                $position2 = intval(substr($match[1], 0, 1)) - 1;
+                
+                if (isset($qualifiesParGroupe[$groupe1][$position1]) && isset($qualifiesParGroupe[$groupe2][$position2])) {
+                    $equipesQualifiees[] = [
+                        'equipe1' => $qualifiesParGroupe[$groupe1][$position1],
+                        'equipe2' => $qualifiesParGroupe[$groupe2][$position2],
+                        'description' => $match[0] . ' vs ' . $match[1]
+                    ];
+                }
+            }
+        } elseif ($phaseProchaine === 'Huitièmes de finale' && $nbGroupes === 6) {
+            // Format pour 6 groupes (comme l'Euro 2016)
+            // Les 4 meilleurs 3e se qualifient aussi
+            // À compléter selon les règles spécifiques
+        } elseif ($phaseProchaine === 'Quarts de finale' && $nbGroupes === 4) {
+            // Format pour 4 groupes
+            $affrontements = [
+                ['1A', '2B'], ['1B', '2A'], ['1C', '2D'], ['1D', '2C']
+            ];
+            
+            foreach ($affrontements as $match) {
+                $groupe1 = substr($match[0], 1);
+                $position1 = intval(substr($match[0], 0, 1)) - 1;
+                
+                $groupe2 = substr($match[1], 1);
+                $position2 = intval(substr($match[1], 0, 1)) - 1;
+                
+                if (isset($qualifiesParGroupe[$groupe1][$position1]) && isset($qualifiesParGroupe[$groupe2][$position2])) {
+                    $equipesQualifiees[] = [
+                        'equipe1' => $qualifiesParGroupe[$groupe1][$position1],
+                        'equipe2' => $qualifiesParGroupe[$groupe2][$position2],
+                        'description' => $match[0] . ' vs ' . $match[1]
+                    ];
+                }
+            }
+        } elseif ($phaseProchaine === 'Demi-finales' && $nbGroupes === 2) {
+            // Format pour 2 groupes
+            $equipesQualifiees[] = [
+                'equipe1' => $qualifiesParGroupe['A'][0], // 1er du groupe A
+                'equipe2' => $qualifiesParGroupe['B'][1], // 2e du groupe B
+                'description' => '1A vs 2B'
+            ];
+            $equipesQualifiees[] = [
+                'equipe1' => $qualifiesParGroupe['B'][0], // 1er du groupe B
+                'equipe2' => $qualifiesParGroupe['A'][1], // 2e du groupe A
+                'description' => '1B vs 2A'
+            ];
+        } else {
+            // Méthode générique pour les autres formats
+            // Mélangez les premiers et deuxièmes de chaque groupe pour éviter que les équipes du même groupe se rencontrent
+            $premiers = [];
+            $deuxiemes = [];
+            
+            foreach ($qualifiesParGroupe as $groupeNom => $equipes) {
+                if (isset($equipes[0])) $premiers[] = $equipes[0];
+                if (isset($equipes[1])) $deuxiemes[] = $equipes[1];
+            }
+            
+            // Assurez-vous que les premiers de groupe affrontent les deuxièmes d'autres groupes
+            for ($i = 0; $i < min(count($premiers), count($deuxiemes)); $i++) {
+                $index2 = ($i + 1) % count($deuxiemes); // Pour éviter que le 1er du groupe A affronte le 2e du groupe A
+                $equipesQualifiees[] = [
+                    'equipe1' => $premiers[$i],
+                    'equipe2' => $deuxiemes[$index2],
+                    'description' => 'Match ' . ($i + 1)
+                ];
             }
         }
     } else if ($phaseActuelle) {
@@ -616,33 +714,84 @@ public function genererPhaseFinale($tournoiId) {
             exit();
         }
         
-        // Récupérer les vainqueurs
+        // Récupérer les vainqueurs et perdants (pour le match de la 3e place)
+        $vainqueurs = [];
+        $perdants = [];
+        
         foreach ($matchsPhaseActuelle as $match) {
             $vainqueurId = null;
+            $perdantId = null;
+            
             if ($match['score1'] > $match['score2']) {
                 $vainqueurId = $match['equipe1_id'];
+                $perdantId = $match['equipe2_id'];
             } elseif ($match['score2'] > $match['score1']) {
                 $vainqueurId = $match['equipe2_id'];
+                $perdantId = $match['equipe1_id'];
             } else {
-                // En cas d'égalité, on peut prendre des décisions (tirs au but, tirage au sort...)
+                // En cas d'égalité, vérifier s'il y a eu des tirs au but ou prolongation
                 // Pour simplifier, on va prendre l'équipe 1 comme vainqueur par défaut
                 $vainqueurId = $match['equipe1_id'];
+                $perdantId = $match['equipe2_id'];
             }
             
-            // Récupérer les données de l'équipe
+            // Récupérer les données des équipes
             $vainqueur = $this->equipes->getById($vainqueurId);
-            if ($vainqueur) {
-                $equipesAQualifier[] = $vainqueur;
+            $perdant = $this->equipes->getById($perdantId);
+            
+            if ($vainqueur) $vainqueurs[] = $vainqueur;
+            if ($perdant) $perdants[] = $perdant;
+        }
+        
+        // Pour les phases à partir des quarts de finale
+        if ($phaseProchaine === 'Demi-finales') {
+            // 1er quart vs 2e quart, 3e quart vs 4e quart
+            $equipesQualifiees[] = [
+                'equipe1' => $vainqueurs[0],
+                'equipe2' => $vainqueurs[1],
+                'description' => 'Vainqueur QF1 vs Vainqueur QF2'
+            ];
+            
+            $equipesQualifiees[] = [
+                'equipe1' => $vainqueurs[2],
+                'equipe2' => $vainqueurs[3],
+                'description' => 'Vainqueur QF3 vs Vainqueur QF4'
+            ];
+        } elseif ($phaseProchaine === 'Finale') {
+            // Créer la finale
+            $equipesQualifiees[] = [
+                'equipe1' => $vainqueurs[0],
+                'equipe2' => $vainqueurs[1],
+                'description' => 'Finale'
+            ];
+            
+            // Créer le match pour la 3e place
+            if (count($perdants) >= 2) {
+                $equipesQualifiees[] = [
+                    'equipe1' => $perdants[0],
+                    'equipe2' => $perdants[1],
+                    'description' => 'Match pour la 3e place',
+                    'phase' => 'Match pour la 3e place'
+                ];
+            }
+        } else {
+            // Pour les huitièmes ou les quarts, apparier les vainqueurs dans l'ordre
+            for ($i = 0; $i < count($vainqueurs); $i += 2) {
+                if ($i + 1 < count($vainqueurs)) {
+                    $equipesQualifiees[] = [
+                        'equipe1' => $vainqueurs[$i],
+                        'equipe2' => $vainqueurs[$i + 1],
+                        'description' => 'Match ' . (($i / 2) + 1)
+                    ];
+                }
             }
         }
     }
     
-    $nbEquipes = count($equipesAQualifier);
-    
-    if ($nbEquipes < 2) {
+    if (empty($equipesQualifiees)) {
         $_SESSION['flash_message'] = "Pas assez d'équipes qualifiées pour générer une nouvelle phase";
         $_SESSION['flash_type'] = "warning";
-        header('Location: index.php?module=tournoi&action=organiser&id=' . $tournoiId);
+        header('Location: index.php?module=tournoi&action=show&id=' . $tournoiId);
         exit();
     }
     
@@ -654,61 +803,36 @@ public function genererPhaseFinale($tournoiId) {
         exit();
     }
     
-    // Créer les matchs en fonction du nombre d'équipes qualifiées
+    // Créer les matchs en fonction des équipes qualifiées
     $dateDebut = date('Y-m-d'); // Par défaut aujourd'hui
-    
-    // Mélanger les équipes pour créer des affiches aléatoires (sauf pour la finale)
-    if ($phaseProchaine !== 'Finale' && $phaseProchaine !== 'Match pour la 3e place') {
-        shuffle($equipesAQualifier);
-    }
     
     // Commencer la création des matchs
     $this->pdo->beginTransaction();
     
     try {
-        // Gérer le cas de la petite finale (match pour la 3e place)
-        if ($phaseProchaine === 'Finale' && $nbEquipes === 4) {
-            // Créer le match pour la 3e place avec les perdants des demi-finales
-            $equipe3 = $equipesAQualifier[2];
-            $equipe4 = $equipesAQualifier[3];
+        // Créer les matchs de la phase suivante
+        foreach ($equipesQualifiees as $index => $match) {
+            // Incrémenter la date pour chaque match
+            $matchDate = date('Y-m-d', strtotime("$dateDebut +" . ($index + 1) . " days"));
             
-            $matchDate = date('Y-m-d', strtotime("$dateDebut +1 days"));
+            // Déterminer l'heure en fonction de la phase (finales en soirée, etc.)
+            $heure = ($phaseProchaine === 'Finale') ? '20:30:00' : 
+                    (($phaseProchaine === 'Match pour la 3e place') ? '17:00:00' : '20:00:00');
             
+            // Utiliser la phase spécifiée ou la phase prochaine par défaut
+            $phase = $match['phase'] ?? $phaseProchaine;
+            
+            // Créer le match
             $this->matchModel->create(
                 $tournoiId,
-                $equipe3['id'],
-                $equipe4['id'],
-                $matchDate . ' 17:00:00', // 17h par défaut pour le match pour la 3e place
-                'À déterminer',
-                'Match pour la 3e place',
-                false
+                $match['equipe1']['id'],
+                $match['equipe2']['id'],
+                $matchDate . ' ' . $heure,
+                'À déterminer', // Stade
+                $phase,
+                false, // Match vedette
+                $match['description'] // Description du match (1A vs 2B, etc.)
             );
-            
-            // Ne conserver que les 2 premières équipes pour la finale
-            $equipesAQualifier = array_slice($equipesAQualifier, 0, 2);
-        }
-        
-        // Créer les matchs de la phase suivante
-        for ($i = 0; $i < count($equipesAQualifier); $i += 2) {
-            // S'assurer qu'on a une paire d'équipes
-            if ($i + 1 < count($equipesAQualifier)) {
-                $equipe1 = $equipesAQualifier[$i];
-                $equipe2 = $equipesAQualifier[$i + 1];
-                
-                // Incrémenter la date pour chaque match
-                $matchDate = date('Y-m-d', strtotime("$dateDebut +" . ($i/2 + 1) . " days"));
-                
-                // Créer le match
-                $this->matchModel->create(
-                    $tournoiId,
-                    $equipe1['id'],
-                    $equipe2['id'],
-                    $matchDate . ' 20:00:00', // 20h par défaut
-                    'À déterminer',
-                    $phaseProchaine,
-                    false
-                );
-            }
         }
         
         $this->pdo->commit();

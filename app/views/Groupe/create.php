@@ -1,4 +1,3 @@
-
 <?php
 
 // Capturer le contenu
@@ -6,25 +5,25 @@ ob_start();
 ?>
 <div class="container mt-4">
     <div class="card shadow">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header ">
             <h1 class="h3 mb-0">Créer un groupe pour le tournoi "<?= htmlspecialchars($tournoi['nom']) ?>"</h1>
         </div>
         
         <div class="card-body">
             <form method="post" action="">
                 <div class="mb-3">
-                    <label for="nom" class="form-label">Nom du groupe</label>
+                    <label for="nom" class="form-label">Nom du groupe <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="nom" name="nom" placeholder="Ex: Groupe A, Groupe B, etc." required>
                     <div class="form-text">Nommez votre groupe de façon claire (ex: "Groupe A", "Poule 1", etc.)</div>
                 </div>
                 
                 <div class="mb-3">
                     <label for="description" class="form-label">Description (optionnel)</label>
-                    <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                    <textarea class="form-control" id="description" name="description" rows="2" placeholder="Une brève description du groupe..."></textarea>
                 </div>
                 
                 <div class="mb-4">
-                    <label class="form-label">Équipes du groupe</label>
+                    <label class="form-label">Équipes du groupe <span class="text-danger">*</span></label>
                     <?php if (empty($equipes)): ?>
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i> Toutes les équipes du tournoi sont déjà attribuées à des groupes.
@@ -40,7 +39,6 @@ ob_start();
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" name="equipes[]" id="equipe-<?= $equipe['id'] ?>" value="<?= $equipe['id'] ?>">
                                                 <label class="form-check-label" for="equipe-<?= $equipe['id'] ?>">
-                                                <label class="form-check-label" for="equipe-<?= $equipe['id'] ?>">
                                                     <?= htmlspecialchars($equipe['nom']) ?>
                                                 </label>
                                             </div>
@@ -52,12 +50,12 @@ ob_start();
                     <?php endif; ?>
                 </div>
                 
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-center mt-4">
                     <a href="index.php?module=tournoi&action=organiser&id=<?= $tournoi['id'] ?>" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-1"></i> Retour
                     </a>
                     
-                    <button type="submit" class="btn btn-success" <?= empty($equipes) ? 'disabled' : '' ?>>
+                    <button type="submit" class="btn-primary" <?= empty($equipes) ? 'disabled' : '' ?>>
                         <i class="fas fa-plus-circle me-1"></i> Créer le groupe
                     </button>
                 </div>
@@ -65,6 +63,19 @@ ob_start();
         </div>
     </div>
 </div>
+
+<style>
+    .form-label {
+        font-weight: bold;
+    }
+    .card {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .alert {
+        margin-top: 1rem;
+    }
+</style>
 
 <?php
 $content = ob_get_clean();

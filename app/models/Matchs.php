@@ -622,6 +622,18 @@ public function getPhasesByTournoi($tournoiId) {
 
 
 
+public function updateMatch($matchId, $tournoiId, $equipe1Id, $equipe2Id, $dateMatch, $lieuMatch, $phase) {
+    $sql = "UPDATE matchs SET 
+            tournoi_id = ?,
+            equipe1_id = ?,
+            equipe2_id = ?,
+            date_match = ?,
+            lieu_match = ?,
+            phase = ?
+            WHERE id = ?";
+    $stmt = $this->pdo->prepare($sql);
+    return $stmt->execute([$tournoiId, $equipe1Id, $equipe2Id, $dateMatch, $lieuMatch, $phase, $matchId]);
+}
 
 
 

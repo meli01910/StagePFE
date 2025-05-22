@@ -68,6 +68,9 @@ ob_start();
                 <a href="index.php?module=tournoi&action=edit&id=<?= $tournoi['id'] ?>" class="admin-btn edit">
                     <i class="fas fa-edit"></i> Modifier
                 </a>
+                  <a href="index.php?module=tournoi&action=organiser&id=<?= $tournoi['id'] ?>" class="admin-btn edit">
+                    <i class="fas fa-edit"></i> organiser
+                </a>
                 <a href="index.php?module=tournoi&action=delete&id=<?= $tournoi['id'] ?>" 
                    class="admin-btn delete"
                    onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce tournoi?');">
